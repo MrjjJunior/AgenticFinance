@@ -46,17 +46,21 @@ class Settings(BaseSettings):
     agent_seed: str = "sAGENT_SEED_PLACEHOLDER"
 
     # ------------------------------------------------------------------
-    # Policy Co-Signer Identity (weight 1)
-    # In production this would be a separate microservice.
+    # Policy Co-Signer – INDEPENDENT microservice (weight 1)
+    # The agent talks to it over HTTP and NEVER holds its seed.
+    # The cosigner service keeps its own limits (human-controlled) and
+    # enforces them independently of anything the agent says.
     # ------------------------------------------------------------------
     policy_cosigner_seed: str = "sCOSIGNER_SEED_PLACEHOLDER"
-    policy_cosigner_api_url: str = "http://localhost:8001/cosign"
+    policy_cosigner_base_url: str = "http://localhost:8001"
 
     # ------------------------------------------------------------------
     # LLM Configuration
     # ------------------------------------------------------------------
     openai_api_key: str = "sk-PLACEHOLDER"
     llm_model: str = "gpt-4o-mini"
+    # Optional: point at an OpenAI-compatible stub for offline testing.
+    openai_base_url: str = ""
 
     # ------------------------------------------------------------------
     # Mandate / Business Rules

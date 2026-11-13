@@ -26,6 +26,13 @@ class _ISOFormatter(logging.Formatter):
 
 def setup_logging() -> None:
     """Call once at application startup."""
+    # Windows consoles default to cp1252, which crashes on any non-ASCII
+    # character (e.g. LLM reasoning text). Force UTF-8 with replacement.
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
     fmt = (
         "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
         if LOG_FORMAT == "text"

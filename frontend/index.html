@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stokvel Procurement Agent — Console</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>" />
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e3e6ea;
+    --text: #1c2330;
+    --muted: #6b7482;
+    --accent: #4f46e5;
+    --accent-soft: #eef0ff;
+    --green: #16a34a;
+    --green-soft: #eaf7ee;
+    --amber: #b45309;
+    --amber-soft: #fdf3e3;
+    --red: #dc2626;
+    --red-soft: #fdecec;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+
+  header.topbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  header.topbar h1 { font-size: 20px; margin: 0; }
+  header.topbar .sub { color: var(--muted); font-size: 13px; width: 100%; margin: 0; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin: 0 0 14px;
+  }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+  label .hint { font-weight: 400; color: var(--muted); }
+  input, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+    background: #fff;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 180px; }
+  .readonly { background: var(--bg) !important; color: var(--muted); }
+
+  .apirow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .apirow input { flex: 1 1 260px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; flex: none; }
+  .dot.ok { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+  .dot.bad { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+
+  button {
+    font: inherit; font-weight: 600;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+  }
+  button:hover { background: var(--bg); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #4338ca; }
+  button.ghost { font-size: 13px; padding: 5px 10px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.items th {
+    text-align: left; font-size: 12px; color: var(--muted);
+    font-weight: 600; padding: 4px 6px;
+  }
+  table.items td { padding: 4px 6px; }
+  table.items input { padding: 6px 8px; }
+  table.items .num { text-align: right; }
+  .item-total { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .grand {
+    display: flex; justify-content: flex-end; align-items: baseline; gap: 8px;
+    margin-top: 10px; font-weight: 700;
+  }
+  .grand span.val { font-variant-numeric: tabular-nums; }
+
+  .toggle { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 14px; }
+  .toggle input { width: auto; }
+
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+
+  /* Result */
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    font-weight: 700; font-size: 13px; letter-spacing: .04em;
+  }
+  .badge.APPROVED  { background: var(--green-soft); color: var(--green); }
+  .badge.ESCALATED { background: var(--amber-soft); color: var(--amber); }
+  .badge.REJECTED  { background: var(--red-soft); color: var(--red); }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  .step { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .step .title { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; font-size: 14px; }
+  .step .title .pass { color: var(--green); }
+  .step .title .fail { color: var(--red); }
+  .step .body { color: var(--muted); font-size: 13px; margin-top: 4px; white-space: pre-wrap; }
+  .step ul { margin: 4px 0 0 18px; padding: 0; }
+
+  pre.json {
+    background: #0f172a; color: #e2e8f0;
+    padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+    max-height: 320px;
+  }
+  textarea.blob { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .blobrow { display: flex; gap: 8px; align-items: stretch; }
+  .blobrow textarea { flex: 1; }
+
+  a { color: var(--accent); }
+
+  .hidden { display: none !important; }
+  .empty { color: var(--muted); font-size: 14px; }
+  .error-box {
+    background: var(--red-soft); border: 1px solid #f3c1c1; color: #7f1d1d;
+    border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 14px;
+  }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <h1>🧾 Stokvel Procurement Agent</h1>
+    <div class="apirow">
+      <span class="dot" id="healthDot" title="Backend health"></span>
+      <input id="apiBase" placeholder="http://localhost:8000" spellcheck="false" title="Agent backend URL" />
+      <span class="dot" id="cosignerDot" title="Policy Co-Signer service health"></span>
+      <input id="cosignerBase" placeholder="http://localhost:8001" spellcheck="false" title="Policy Co-Signer service URL" />
+      <button class="ghost" id="btnHealth">Check</button>
+    </div>
+    <p class="sub">Submit a scanned invoice → AI verifies it against the order → payment is approved, escalated to you, or rejected. Limits live in the Policy Co-Signer service — you set them below.</p>
+  </header>
+
+  <!-- ------------------------------------------------ Owner console -->
+  <div class="card">
+    <h2>Owner console · spending limits (Human only — set outside the agent)</h2>
+    <div class="row">
+      <div>
+        <label>Daily spending cap (RLUSD)</label>
+        <input id="ownerCap" type="number" min="0" step="any" placeholder="5000" />
+      </div>
+      <div>
+        <label>Signed spend today (RLUSD)</label>
+        <input id="ownerSpent" class="readonly" readonly tabindex="-1" />
+      </div>
+    </div>
+    <label style="margin-top:14px">Approved supplier addresses <span class="hint">(one per line)</span></label>
+    <textarea id="ownerAllowlist" rows="3" spellcheck="false"></textarea>
+    <label style="margin-top:10px">Admin token <span class="hint">(optional — only if the cosigner service requires one)</span></label>
+    <input id="ownerToken" type="password" spellcheck="false" placeholder="COSIGNER_ADMIN_TOKEN" />
+    <div class="actions" style="margin-top:12px">
+      <button class="primary" id="btnSaveLimits">Save limits</button>
+      <button id="btnRefreshLimits">Refresh</button>
+      <button id="btnResetSpend">Reset today's spend</button>
+      <span id="ownerStatus" class="empty"></span>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------ Order intent -->
+  <div class="card">
+    <h2>1 · Order intent</h2>
+    <div class="row">
+      <div>
+        <label>Order ID</label>
+        <input id="orderId" placeholder="ORD-2026-001" />
+      </div>
+      <div>
+        <label>Expected supplier XRPL address <span class="hint">(r…)</span></label>
+        <input id="orderSupplier" placeholder="rSupplierAlpha…" spellcheck="false" />
+      </div>
+      <div>
+        <label>Expected total (RLUSD)</label>
+        <input id="orderTotal" class="readonly" readonly tabindex="-1" />
+      </div>
+    </div>
+
+    <label style="margin-top:14px">Line items</label>
+    <table class="items">
+      <thead>
+        <tr><th style="width:45%">Description</th><th style="width:15%">Qty</th><th style="width:20%">Unit price</th><th class="num">Line total</th><th></th></tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <div class="grand">Expected total: <span class="val" id="grandTotal">0.00</span> <span style="color:var(--muted);font-weight:400">RLUSD</span></div>
+    <div class="actions"><button class="ghost" id="btnAddItem">+ Add item</button></div>
+  </div>
+
+  <!-- ------------------------------------------------ Invoice -->
+  <div class="card">
+    <h2>2 · Scanned invoice</h2>
+    <div class="row">
+      <div>
+        <label>Invoice number</label>
+        <input id="invoiceNumber" placeholder="INV-9999" />
+      </div>
+      <div>
+        <label>Invoice date</label>
+        <input id="invoiceDate" type="date" />
+      </div>
+    </div>
+
+    <label class="toggle">
+      <input type="checkbox" id="simulateMismatch" />
+      Simulate a different invoice (test mismatches / escalation)
+    </label>
+
+    <div id="invoiceAdvanced" class="hidden">
+      <div class="row" style="margin-top:6px">
+        <div>
+          <label>Invoice supplier XRPL address <span class="hint">(can differ from order)</span></label>
+          <input id="invoiceSupplier" spellcheck="false" />
+        </div>
+        <div>
+          <label>Stated total on invoice (RLUSD)</label>
+          <input id="statedTotal" />
+        </div>
+      </div>
+      <label style="margin-top:12px">Invoice line items</label>
+      <table class="items">
+        <thead>
+          <tr><th style="width:45%">Description</th><th style="width:15%">Qty</th><th style="width:20%">Unit price</th><th class="num">Line total</th><th></th></tr>
+        </thead>
+        <tbody id="invoiceItemsBody"></tbody>
+      </table>
+      <div class="actions"><button class="ghost" id="btnAddInvoiceItem">+ Add item</button></div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------ Supplier -->
+  <div class="card">
+    <h2>3 · Supplier details</h2>
+    <div class="row">
+      <div>
+        <label>Supplier name</label>
+        <input id="supName" placeholder="Thabo Foods Pty Ltd" />
+      </div>
+      <div>
+        <label>Registration number</label>
+        <input id="supReg" placeholder="2020/123456/07" />
+      </div>
+      <div>
+        <label>XRPL address <span class="hint">(payment destination)</span></label>
+        <input id="supAddress" spellcheck="false" />
+      </div>
+    </div>
+  </div>
+
+  <div class="actions" style="margin-bottom:24px">
+    <button class="primary" id="btnSubmit">Process invoice ▸</button>
+    <button id="btnDemo">Load demo data</button>
+    <button id="btnClear">Clear</button>
+    <span id="busy" class="empty hidden">⏳ Running 4-step workflow… (AI check → ledger check → mandate → execution)</span>
+  </div>
+
+  <!-- ------------------------------------------------ Result -->
+  <div class="card hidden" id="resultCard">
+    <h2>Result</h2>
+    <div id="resultBadge"></div>
+    <div class="meta" id="resultMeta"></div>
+    <div id="resultBody"></div>
+  </div>
+
+  <footer>
+    Agent backend: <code>POST /api/v1/process-invoice</code> · Policy Co-Signer: <code>POST /cosign</code> ·
+    XRPL Testnet · RLUSD ·
+    <a href="https://testnet.xrpl.org/" target="_blank" rel="noopener">Explorer ↗</a>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ state */
+
+const $ = (id) => document.getElementById(id);
+
+const els = {
+  apiBase: $("apiBase"),
+  healthDot: $("healthDot"),
+  cosignerBase: $("cosignerBase"),
+  cosignerDot: $("cosignerDot"),
+  ownerCap: $("ownerCap"),
+  ownerSpent: $("ownerSpent"),
+  ownerAllowlist: $("ownerAllowlist"),
+  ownerToken: $("ownerToken"),
+  ownerStatus: $("ownerStatus"),
+  orderId: $("orderId"),
+  orderSupplier: $("orderSupplier"),
+  orderTotal: $("orderTotal"),
+  itemsBody: $("itemsBody"),
+  grandTotal: $("grandTotal"),
+  invoiceNumber: $("invoiceNumber"),
+  invoiceDate: $("invoiceDate"),
+  simulateMismatch: $("simulateMismatch"),
+  invoiceAdvanced: $("invoiceAdvanced"),
+  invoiceSupplier: $("invoiceSupplier"),
+  statedTotal: $("statedTotal"),
+  invoiceItemsBody: $("invoiceItemsBody"),
+  supName: $("supName"),
+  supReg: $("supReg"),
+  supAddress: $("supAddress"),
+  submit: $("btnSubmit"),
+  busy: $("busy"),
+  resultCard: $("resultCard"),
+  resultBadge: $("resultBadge"),
+  resultMeta: $("resultMeta"),
+  resultBody: $("resultBody"),
+};
+
+/* ------------------------------------------------------------- utilities */
+
+function apiRoot() {
+  return (els.apiBase.value || "").trim().replace(/\/+$/, "");
+}
+
+function cosignerRoot() {
+  return (els.cosignerBase.value || "").trim().replace(/\/+$/, "");
+}
+
+function adminHeaders() {
+  const h = { "Content-Type": "application/json" };
+  const tok = els.ownerToken.value.trim();
+  if (tok) h["X-Admin-Token"] = tok;
+  return h;
+}
+
+function num(v) {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmt(n) {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+/* ----------------------------------------------------------- line items */
+
+function addItemRow(body, item = {}) {
+  const tr = document.createElement("tr");
+
+  const tdDesc = document.createElement("td");
+  const desc = document.createElement("input");
+  desc.className = "li-desc";
+  desc.placeholder = "Maize Meal 10kg";
+  desc.value = item.description ?? "";
+  tdDesc.appendChild(desc);
+
+  const tdQty = document.createElement("td");
+  const qty = document.createElement("input");
+  qty.className = "li-qty";
+  qty.type = "number"; qty.min = "0"; qty.step = "any";
+  qty.placeholder = "10";
+  qty.value = item.quantity ?? "";
+  tdQty.appendChild(qty);
+
+  const tdPrice = document.createElement("td");
+  const price = document.createElement("input");
+  price.className = "li-price";
+  price.type = "number"; price.min = "0"; price.step = "any";
+  price.placeholder = "100.00";
+  price.value = item.unit_price ?? "";
+  tdPrice.appendChild(price);
+
+  const tdTotal = document.createElement("td");
+  tdTotal.className = "num";
+  const total = document.createElement("span");
+  total.className = "item-total";
+  tdTotal.appendChild(total);
+
+  const tdDel = document.createElement("td");
+  const del = document.createElement("button");
+  del.className = "ghost"; del.textContent = "✕"; del.title = "Remove item";
+  del.addEventListener("click", () => { tr.remove(); recalc(); });
+  tdDel.appendChild(del);
+
+  tr.append(tdDesc, tdQty, tdPrice, tdTotal, tdDel);
+  tr.addEventListener("input", recalc);
+  body.appendChild(tr);
+  recalc();
+}
+
+function collectItems(body) {
+  return [...body.querySelectorAll("tr")].map((tr) => ({
+    description: tr.querySelector(".li-desc").value.trim(),
+    quantity: num(tr.querySelector(".li-qty").value),
+    unit_price: num(tr.querySelector(".li-price").value),
+  })).filter((it) => it.description || it.quantity || it.unit_price);
+}
+
+function bodyTotal(body) {
+  return collectItems(body).reduce((s, it) => s + it.quantity * it.unit_price, 0);
+}
+
+function recalc() {
+  for (const body of [els.itemsBody, els.invoiceItemsBody]) {
+    body.querySelectorAll("tr").forEach((tr) => {
+      const t = num(tr.querySelector(".li-qty").value) * num(tr.querySelector(".li-price").value);
+      tr.querySelector(".item-total").textContent = t ? fmt(t) : "—";
+    });
+  }
+  const orderTotal = bodyTotal(els.itemsBody);
+  els.grandTotal.textContent = fmt(orderTotal);
+  els.orderTotal.value = fmt(orderTotal);
+  if (!els.simulateMismatch.checked) {
+    els.statedTotal.value = orderTotal ? fmt(orderTotal) : "";
+  }
+}
+
+/* ------------------------------------------------------------ demo data */
+
+const DEMO = {
+  orderSupplier: "rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL",
+  items: [
+    { description: "Maize Meal 10kg", quantity: 10, unit_price: 100 },
+    { description: "Cooking Oil 5L", quantity: 4, unit_price: 120 },
+  ],
+  invoiceNumber: "INV-9999",
+  supName: "Thabo Foods Pty Ltd",
+  supReg: "2020/123456/07",
+};
+
+function loadDemo() {
+  clearForm(false);
+  els.orderId.value = "ORD-" + new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  els.orderSupplier.value = DEMO.orderSupplier;
+  els.supAddress.value = DEMO.orderSupplier;
+  els.itemsBody.innerHTML = "";
+  DEMO.items.forEach((it) => addItemRow(els.itemsBody, it));
+  els.invoiceNumber.value = DEMO.invoiceNumber;
+  els.invoiceDate.value = new Date().toISOString().slice(0, 10);
+  els.supName.value = DEMO.supName;
+  els.supReg.value = DEMO.supReg;
+  recalc();
+}
+
+function clearForm(alsoResult = true) {
+  document.querySelectorAll("input").forEach((i) => {
+    if (i !== els.apiBase && !i.readOnly) i.value = "";
+  });
+  els.itemsBody.innerHTML = "";
+  els.invoiceItemsBody.innerHTML = "";
+  els.simulateMismatch.checked = false;
+  syncMismatch();
+  addItemRow(els.itemsBody);
+  if (alsoResult) {
+    els.resultCard.classList.add("hidden");
+    els.resultBody.innerHTML = "";
+  }
+  recalc();
+}
+
+function syncMismatch() {
+  els.invoiceAdvanced.classList.toggle("hidden", !els.simulateMismatch.checked);
+  recalc();
+}
+
+/* --------------------------------------------------------------- health */
+
+async function checkHealth() {
+  const base = apiRoot();
+  if (!base) return;
+  els.healthDot.className = "dot";
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(`${base}/api/v1/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    els.healthDot.className = "dot " + (res.ok ? "ok" : "bad");
+  } catch {
+    els.healthDot.className = "dot bad";
+  }
+
+  // Second dot: the independent Policy Co-Signer service.
+  const cos = cosignerRoot();
+  els.cosignerDot.className = "dot";
+  if (!cos) return;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(`${cos}/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    els.cosignerDot.className = "dot " + (res.ok ? "ok" : "bad");
+  } catch {
+    els.cosignerDot.className = "dot bad";
+  }
+}
+
+/* ------------------------------------------------- owner console (limits) */
+
+async function loadLimits() {
+  const cos = cosignerRoot();
+  if (!cos) return;
+  els.ownerStatus.textContent = "";
+  try {
+    const res = await fetch(`${cos}/limits`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const l = await res.json();
+    els.ownerCap.value = l.daily_cap_rlusd;
+    els.ownerSpent.value = fmt(Number(l.spent_today_rlusd));
+    els.ownerAllowlist.value = (l.approved_suppliers || []).join("\n");
+  } catch (err) {
+    els.ownerStatus.textContent = `Could not read limits from the cosigner service (${err.message})`;
+  }
+}
+
+async function saveLimits() {
+  const cos = cosignerRoot();
+  if (!cos) return;
+  const cap = els.ownerCap.value.trim();
+  const suppliers = els.ownerAllowlist.value
+    .split("\n").map((s) => s.trim()).filter(Boolean);
+  if (!cap && suppliers.length === 0) return;
+
+  const body = {};
+  if (cap) body.daily_cap_rlusd = cap;
+  if (suppliers.length) body.approved_suppliers = suppliers;
+
+  els.ownerStatus.textContent = "Saving…";
+  try {
+    const res = await fetch(`${cos}/admin/limits`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const detail = typeof data.detail === "object" ? data.detail?.reason : data.detail;
+      throw new Error(detail || `HTTP ${res.status}`);
+    }
+    els.ownerSpent.value = fmt(Number(data.spent_today_rlusd));
+    els.ownerCap.value = data.daily_cap_rlusd;
+    els.ownerAllowlist.value = (data.approved_suppliers || []).join("\n");
+    els.ownerStatus.textContent = "Limits saved — the agent picks them up on its next invoice.";
+  } catch (err) {
+    els.ownerStatus.textContent = `Save failed: ${err.message}`;
+  }
+}
+
+async function resetSpend() {
+  const cos = cosignerRoot();
+  if (!cos) return;
+  try {
+    const res = await fetch(`${cos}/admin/spend/reset`, {
+      method: "POST",
+      headers: adminHeaders(),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const detail = typeof data.detail === "object" ? data.detail?.reason : data.detail;
+      throw new Error(detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    els.ownerSpent.value = fmt(Number(data.spent_today_rlusd));
+    els.ownerStatus.textContent = "Today's signed spend reset to 0.";
+  } catch (err) {
+    els.ownerStatus.textContent = `Reset failed: ${err.message}`;
+  }
+}
+
+/* --------------------------------------------------------------- submit */
+
+function buildPayload() {
+  const mismatch = els.simulateMismatch.checked;
+  const items = collectItems(els.itemsBody);
+  const invoiceItems = mismatch ? collectItems(els.invoiceItemsBody) : items;
+  const statedTotal = mismatch ? num(els.statedTotal.value) : bodyTotal(els.itemsBody);
+  const supplier = els.supAddress.value.trim() || els.orderSupplier.value.trim();
+
+  return {
+    order_intent: {
+      order_id: els.orderId.value.trim() || "ORD-UNSPECIFIED",
+      expected_supplier_xrpl_address: els.orderSupplier.value.trim(),
+      items,
+      expected_total: bodyTotal(els.itemsBody),
+      currency: "RLUSD",
+    },
+    parsed_invoice: {
+      invoice_number: els.invoiceNumber.value.trim() || "INV-UNSPECIFIED",
+      supplier_xrpl_address: (mismatch ? els.invoiceSupplier.value.trim() : supplier),
+      line_items: invoiceItems,
+      stated_total: statedTotal,
+      currency: "RLUSD",
+      invoice_date: els.invoiceDate.value || new Date().toISOString().slice(0, 10),
+    },
+    supplier_details: {
+      name: els.supName.value.trim(),
+      registration_number: els.supReg.value.trim(),
+      xrpl_address: supplier,
+    },
+  };
+}
+
+function validate(payload) {
+  const problems = [];
+  if (!apiRoot()) problems.push("API URL is empty (e.g. http://localhost:8000).");
+  if (!payload.order_intent.expected_supplier_xrpl_address) problems.push("Order: expected supplier XRPL address is required.");
+  if (payload.order_intent.items.length === 0) problems.push("Order: at least one line item is required.");
+  if (!payload.parsed_invoice.invoice_number || payload.parsed_invoice.invoice_number === "INV-UNSPECIFIED") problems.push("Invoice number is required.");
+  if (!payload.supplier_details.xrpl_address) problems.push("Supplier XRPL address is required.");
+  return problems;
+}
+
+async function submit() {
+  const payload = buildPayload();
+  const problems = validate(payload);
+  if (problems.length) {
+    renderError(problems.map((p) => "• " + p).join("\n"));
+    return;
+  }
+
+  els.submit.disabled = true;
+  els.busy.classList.remove("hidden");
+  try {
+    const res = await fetch(`${apiRoot()}/api/v1/process-invoice`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail, null, 2);
+      renderError(`HTTP ${res.status} — ${detail}`);
+    } else {
+      renderResult(data);
+    }
+  } catch (err) {
+    renderError(
+      `Could not reach the backend at ${apiRoot()}.\n\n${err.message}\n\n` +
+      "Is it running? Start everything with:\n  .\\start_all.ps1\n" +
+      "(or manually: cd procurement_agent; .\\venv\\Scripts\\python -m uvicorn app.main:app --port 8000)"
+    );
+  } finally {
+    els.submit.disabled = false;
+    els.busy.classList.add("hidden");
+  }
+}
+
+/* -------------------------------------------------------------- render */
+
+function stepCard(title, ok, bodyHtml) {
+  return (
+    `<div class="step"><div class="title"><span>${title}</span>` +
+    `<span class="${ok ? "pass" : "fail"}">${ok ? "✔ PASS" : "✘ FAIL"}</span></div>` +
+    `<div class="body">${bodyHtml}</div></div>`
+  );
+}
+
+function renderResult(data) {
+  els.resultCard.classList.remove("hidden");
+  els.resultBadge.innerHTML = `<span class="badge ${escapeHtml(data.outcome)}">${escapeHtml(data.outcome)}</span>`;
+  els.resultMeta.innerHTML =
+    `Order <strong>${escapeHtml(data.order_id)}</strong> · Invoice <strong>${escapeHtml(data.invoice_number)}</strong>`;
+
+  const parts = [];
+
+  if (data.ai_verification) {
+    const a = data.ai_verification;
+    const discrepancies = a.discrepancies?.length
+      ? `<ul>${a.discrepancies.map((d) => `<li>${escapeHtml(d)}</li>`).join("")}</ul>` : "";
+    parts.push(stepCard(
+      "Step 1 · AI verification",
+      a.passed,
+      `Confidence: <strong>${(a.confidence_score * 100).toFixed(0)}%</strong><br/>${escapeHtml(a.reasoning)}${discrepancies}`
+    ));
+  }
+
+  if (data.ledger_verification) {
+    const l = data.ledger_verification;
+    parts.push(stepCard(
+      "Step 2 · Ledger verification",
+      l.passed,
+      `Supplier on allowlist: <strong>${l.supplier_on_allowlist ? "yes" : "no"}</strong> · ` +
+      `XLS-70 KYB credential: <strong>${l.kyb_credential_found ? "found" : "not found"}</strong>`
+    ));
+  }
+
+  if (data.mandate_check) {
+    const m = data.mandate_check;
+    parts.push(stepCard(
+      "Step 3 · Mandate check",
+      m.mandate_satisfied,
+      `Daily cap: <strong>${fmt(Number(m.daily_cap_rlusd))} RLUSD</strong> · ` +
+      `Spent today: <strong>${fmt(Number(m.already_spent_today_rlusd))}</strong> · ` +
+      `This tx: <strong>${fmt(Number(m.this_transaction_rlusd))}</strong> · ` +
+      `Supplier approved: <strong>${m.supplier_approved ? "yes" : "no"}</strong>`
+    ));
+  }
+
+  if (data.outcome === "APPROVED" && data.submitted_tx) {
+    const t = data.submitted_tx;
+    parts.push(stepCard(
+      "Step 4 · Path A — autonomous execution", true,
+      `Payment executed autonomously on XRPL Testnet — signed by the Agent (weight 1) + Policy Co-Signer (weight 1), no human involved.<br/>` +
+      `Ticket sequence: <strong>${t.ticket_sequence_used}</strong><br/>` +
+      `Tx hash: <code style="word-break:break-all">${escapeHtml(t.xrpl_tx_hash)}</code><br/>` +
+      `<a href="${escapeHtml(t.explorer_url)}" target="_blank" rel="noopener">View on XRPL Testnet Explorer ↗</a>`
+    ));
+  }
+
+  if (data.outcome === "ESCALATED" && data.approval_request) {
+    const ar = data.approval_request;
+    const blobId = "blob_" + Date.now();
+    parts.push(stepCard(
+      "Step 4 · Path B — escalated to Human Owner", false,
+      `Reason: <strong>${escapeHtml(ar.escalation_reason)}</strong><br/>${escapeHtml(ar.human_readable_reason)}<br/><br/>` +
+      `The agent signed once (weight 1) and stopped. The Policy Co-Signer was not asked to sign. To execute, you (weight 2) countersign the blob below and submit it — or simply ignore it.<br/><br/>` +
+      `<div class="blobrow"><textarea id="${blobId}" class="blob" rows="4" readonly>${escapeHtml(ar.partially_signed_tx_blob)}</textarea>` +
+      `<button class="ghost" onclick="copyBlob('${blobId}')">Copy</button></div><br/>` +
+      `<details><summary>Show transaction JSON (tx_dict)</summary><pre class="json">${escapeHtml(JSON.stringify(ar.tx_dict, null, 2))}</pre></details><br/>` +
+      `ℹ️ ${escapeHtml(ar.instructions)}`
+    ));
+  }
+
+  if (data.outcome === "REJECTED") {
+    parts.push(stepCard(
+      "Step 4 · Workflow stopped", false,
+      escapeHtml(data.rejection_reason ?? "No reason provided.")
+    ));
+  }
+
+  els.resultBody.innerHTML = parts.join("");
+  els.resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function renderError(message) {
+  els.resultCard.classList.remove("hidden");
+  els.resultBadge.innerHTML = `<span class="badge REJECTED">ERROR</span>`;
+  els.resultMeta.innerHTML = "The request could not be completed.";
+  els.resultBody.innerHTML = `<div class="error-box" style="white-space:pre-wrap">${escapeHtml(message)}</div>`;
+  els.resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function copyBlob(id) {
+  const ta = document.getElementById(id);
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = ta.nextElementSibling;
+    const old = btn.textContent;
+    btn.textContent = "Copied ✓";
+    setTimeout(() => (btn.textContent = old), 1500);
+  });
+}
+
+/* ---------------------------------------------------------------- wire up */
+
+els.apiBase.addEventListener("change", () => {
+  localStorage.setItem("procApiBase", apiRoot());
+  checkHealth();
+});
+
+els.cosignerBase.addEventListener("change", () => {
+  localStorage.setItem("procCosignerBase", cosignerRoot());
+  checkHealth();
+  loadLimits();
+});
+els.ownerToken.addEventListener("change", () => {
+  localStorage.setItem("procOwnerToken", els.ownerToken.value);
+});
+
+els.simulateMismatch.addEventListener("change", syncMismatch);
+$("btnAddItem").addEventListener("click", () => addItemRow(els.itemsBody));
+$("btnAddInvoiceItem").addEventListener("click", () => addItemRow(els.invoiceItemsBody));
+$("btnDemo").addEventListener("click", loadDemo);
+$("btnClear").addEventListener("click", () => clearForm());
+$("btnHealth").addEventListener("click", checkHealth);
+$("btnRefreshLimits").addEventListener("click", loadLimits);
+$("btnSaveLimits").addEventListener("click", saveLimits);
+$("btnResetSpend").addEventListener("click", resetSpend);
+els.submit.addEventListener("click", submit);
+
+els.apiBase.value = localStorage.getItem("procApiBase") || "http://localhost:8000";
+els.cosignerBase.value = localStorage.getItem("procCosignerBase") || "http://localhost:8001";
+els.ownerToken.value = localStorage.getItem("procOwnerToken") || "";
+clearForm();
+checkHealth();
+loadLimits();
+</script>
+</body>
+</html>

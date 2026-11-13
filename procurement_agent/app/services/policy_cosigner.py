@@ -1,36 +1,38 @@
 """
-PolicyCosigner – mocked second-signature service (weight = 1).
+Policy Co-Signer – HTTP CLIENT for the independent cosigner microservice.
 
-In production this would be a hardened microservice with its own HSM or
-secrets manager, callable over mTLS. Here it is a self-contained class
-that:
+This module contains NO signing keys and NO policy state. It is purely a
+transport adapter: the agent sends the autofilled transaction to the
+cosigner service (default http://localhost:8001/cosign), and the service —
+which holds the cosigner's own seed and the Human Owner's limits — decides
+independently whether to sign.
 
-  1. Re-validates the transaction against the agreed policy limits before
-     signing (defence-in-depth – the cosigner is an independent check,
-     NOT just a rubber stamp).
-  2. Signs the already-autofilled transaction using its own seed with
-     multisign=True (placing the signature in the XRPL `Signers` array).
-  3. NEVER signs if the transaction amount exceeds the policy cap or if
-     the destination is not on the approved list.
+Why a separate service?
+-----------------------
+* Limits are enforced SOMEWHERE THE AGENT DOES NOT CONTROL. A compromised
+  or buggy agent process cannot relax a cap that lives in another process
+  with its own seed and its own config file.
+* The Human Owner sets limits through the cosigner service's admin API —
+  never through the agent.
 
-Security notes
---------------
-* The cosigner uses its OWN wallet seed (policy_cosigner_seed), not the
-  main account's seed or the agent's seed.
-* multisign=True is mandatory: without it xrpl-py would put the signature
-  in TxnSignature, making it a single-signed tx that would be rejected by
-  the ledger because the master key is disabled.
+Contract
+--------
+POST /cosign  body: {"tx_json": {...}, "amount_rlusd": "...", "destination_address": "..."}
+→ 200 {"signed_tx_blob": "<hex>", "cosigner_address": "...", "recorded_spend_rlusd": "..."}
+→ 403 {"detail": {"refused": true, "reason": "..."}}
+
+The cosigner self-inspects `tx_json` (it does NOT trust the declared
+amount/destination) — the declared fields are advisory only.
 """
 
 from __future__ import annotations
 
 import logging
 from decimal import Decimal
-from typing import Optional
+from typing import Any
 
+import httpx
 from xrpl.models.transactions import Transaction
-from xrpl.transaction import sign
-from xrpl.wallet import Wallet
 
 from app.core.config import get_settings
 
@@ -38,122 +40,150 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyCosignerError(Exception):
-    """Raised when the Policy Co-Signer refuses to sign."""
+    """Raised when the Policy Co-Signer service refuses to sign (or is unreachable)."""
 
 
 class PolicyCosigner:
     """
-    Mocked Policy Co-Signer service.
+    Async HTTP client for the independent Policy Co-Signer microservice.
 
-    Instantiate once at application startup and reuse across requests.
-    In production, replace the body of `sign_transaction` with an HTTP
-    call to the external cosigner microservice.
+    Instantiate once per request (cheap; no persistent connection state).
+    The cosigner's seed NEVER lives in this process — that is the whole
+    point of the split.
     """
 
     def __init__(self) -> None:
         settings = get_settings()
-
-        # SECURITY: Load the cosigner's OWN wallet – not the main account.
-        self._wallet: Wallet = Wallet.from_seed(settings.policy_cosigner_seed)
-        self._daily_cap: Decimal = settings.daily_spending_cap_rlusd
-        self._approved_suppliers: list[str] = settings.approved_supplier_list
-        self._rlusd_issuer: str = settings.rlusd_issuer
-
-        logger.info(
-            "PolicyCosigner initialised | address=%s",
-            self._wallet.classic_address,
-        )
+        base = settings.policy_cosigner_base_url.rstrip("/")
+        self._cosign_url = f"{base}/cosign"
+        self._limits_url = f"{base}/limits"
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def sign_transaction(
+    async def sign_transaction(
         self,
         autofilled_tx: Transaction,
         transaction_amount_rlusd: Decimal,
         destination_address: str,
     ) -> Transaction:
         """
-        Validate policy constraints independently and return the cosigner's
-        signed version of the transaction (multisign=True).
+        Ask the cosigner service to add its weight-1 signature.
 
         Parameters
         ----------
         autofilled_tx:
             The autofilled (but not yet signed) transaction object.
         transaction_amount_rlusd:
-            Parsed transaction value used for the independent cap check.
+            Parsed transaction value — ADVICE ONLY. The service extracts
+            the authoritative amount from the tx itself.
         destination_address:
-            The supplier XRPL address – independently verified against the
-            cosigner's own allowlist (not the agent's cached copy).
+            The supplier XRPL address — ADVICE ONLY. The service extracts
+            the destination from the tx itself.
 
         Returns
         -------
         Transaction
-            Cosigner-signed tx with signature placed in the `Signers` array.
+            Cosigner-signed tx (signature in the `Signers` array), rebuilt
+            from the hex blob the service returned.
 
         Raises
         ------
         PolicyCosignerError
-            If the cosigner's independent checks fail. This is the
-            last line of defence against a compromised agent.
+            If the cosigner's independent checks fail (HTTP 403) or the
+            service is unreachable / returns garbage.
         """
-        self._independent_policy_check(transaction_amount_rlusd, destination_address)
+        payload: dict[str, Any] = {
+            # Round-trip verified: signing the rebuilt tx produces the exact
+            # same signature as signing the original object.
+            "tx_json": autofilled_tx.to_xrpl(),
+            "amount_rlusd": str(transaction_amount_rlusd),
+            "destination_address": destination_address,
+        }
 
         logger.info(
-            "PolicyCosigner: signing transaction | destination=%s | amount=%s RLUSD",
-            destination_address,
+            "PolicyCosigner: requesting signature from %s | amount=%s RLUSD | destination=%s",
+            self._cosign_url,
             transaction_amount_rlusd,
+            destination_address,
         )
 
-        # multisign=True is MANDATORY – places sig in Signers[], not TxnSignature
-        cosigner_signed_tx = sign(
-            autofilled_tx,
-            self._wallet,
-            multisign=True,  # ← critical security invariant
-        )
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self._cosign_url, json=payload)
+        except httpx.HTTPError as exc:
+            raise PolicyCosignerError(
+                f"Could not reach Policy Co-Signer service at {self._cosign_url}: {exc}"
+            ) from exc
 
-        logger.info(
-            "PolicyCosigner: signature applied | cosigner_address=%s",
-            self._wallet.classic_address,
-        )
-        return cosigner_signed_tx
-
-    @property
-    def address(self) -> str:
-        return self._wallet.classic_address
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
-    def _independent_policy_check(
-        self,
-        amount: Decimal,
-        destination: str,
-    ) -> None:
-        """
-        The cosigner runs its OWN policy checks, independent of the agent.
-        This prevents an agent bug or compromise from bypassing limits.
-        """
-        errors: list[str] = []
-
-        if amount > self._daily_cap:
-            errors.append(
-                f"Amount {amount} RLUSD exceeds policy cap {self._daily_cap} RLUSD"
-            )
-
-        if destination not in self._approved_suppliers:
-            errors.append(
-                f"Destination {destination} is NOT on the cosigner's approved list"
-            )
-
-        if errors:
-            reason = "; ".join(errors)
-            logger.warning(
-                "PolicyCosigner REFUSED to sign | reasons=%s", reason
-            )
+        if response.status_code == 403:
+            reason = self._extract_reason(response)
+            logger.warning("PolicyCosigner REFUSED to sign | reason=%s", reason)
             raise PolicyCosignerError(
                 f"Policy Co-Signer refused to sign transaction: {reason}"
             )
+
+        if response.status_code != 200:
+            raise PolicyCosignerError(
+                f"Policy Co-Signer service error (HTTP {response.status_code}): "
+                f"{response.text[:300]}"
+            )
+
+        data = response.json()
+        blob = data.get("signed_tx_blob")
+        if not blob:
+            raise PolicyCosignerError(
+                "Policy Co-Signer returned a response without signed_tx_blob"
+            )
+
+        try:
+            cosigner_signed_tx = Transaction.from_blob(blob)
+        except Exception as exc:  # noqa: BLE001
+            raise PolicyCosignerError(
+                f"Could not parse signed transaction blob from cosigner: {exc}"
+            ) from exc
+
+        logger.info(
+            "PolicyCosigner: signature applied | cosigner_address=%s",
+            data.get("cosigner_address", "unknown"),
+        )
+        return cosigner_signed_tx
+
+    async def get_limits(self) -> dict[str, Any]:
+        """
+        Fetch the Human Owner's live limits and today's spend from the
+        cosigner service. Used by the agent's mandate check so that a cap
+        the owner just changed takes effect IMMEDIATELY, without restarting
+        the agent.
+
+        Falls back to local settings if the service is unreachable.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(self._limits_url)
+            response.raise_for_status()
+            return response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning(
+                "Could not read limits from cosigner service (%s) — "
+                "falling back to local config | error=%s",
+                self._limits_url,
+                exc,
+            )
+            return {}
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_reason(response: httpx.Response) -> str:
+        """Pull a human-readable refusal reason out of the 403 response."""
+        try:
+            detail = response.json().get("detail", {})
+            if isinstance(detail, dict):
+                return str(detail.get("reason", detail))
+            return str(detail)
+        except Exception:  # noqa: BLE001
+            return response.text[:300]

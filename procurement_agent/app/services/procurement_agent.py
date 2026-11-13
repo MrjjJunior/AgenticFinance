@@ -24,10 +24,14 @@ Security invariants enforced
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import re
 from decimal import Decimal
 from typing import Any, Optional
+
+from openai import AsyncOpenAI
 
 # ---------------------------------------------------------------------------
 # XRPL imports
@@ -188,7 +192,7 @@ class ProcurementAgent:
         # ------------------------------------------------------------------
         # Step 3 – Mandate Check
         # ------------------------------------------------------------------
-        mandate_result = self._step3_mandate_check(
+        mandate_result = await self._step3_mandate_check(
             parsed_invoice.supplier_xrpl_address,
             parsed_invoice.stated_total,
         )
@@ -253,9 +257,11 @@ class ProcurementAgent:
                 f" items, order expected {len(order_intent.items)}"
             )
 
-        # --- Simulated LLM call -------------------------------------------
+        # --- Real LLM semantic cross-check ---------------------------------
+        # The deterministic checks above are authoritative for arithmetic;
+        # the LLM adds semantic discrepancies the code cannot catch.
         llm_analysis = await self._call_llm_for_verification(
-            order_intent, parsed_invoice
+            order_intent, parsed_invoice, known_discrepancies=discrepancies
         )
 
         discrepancies.extend(llm_analysis.get("additional_discrepancies", []))
@@ -283,40 +289,140 @@ class ProcurementAgent:
         self,
         order_intent: OrderIntent,
         parsed_invoice: ParsedInvoice,
+        known_discrepancies: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """
-        PRODUCTION: Replace this method body with a real OpenAI / Anthropic call.
+        REAL OpenAI call: the LLM cross-checks the parsed invoice against the
+        original order intent and reports additional semantic discrepancies.
 
-        The prompt instructs the model to return a JSON object with:
-          {
-            "additional_discrepancies": ["...", "..."],
-            "confidence_score": 0.97,
-            "reasoning": "..."
-          }
+        Fail-closed policy
+        ------------------
+        Any failure — missing API key, network error, unparseable response —
+        raises ProcurementAgentError, which aborts the workflow. We NEVER
+        proceed to payment when the AI verification step did not complete.
 
-        MOCK: Returns a clean pass with high confidence.
+        Returns
+        -------
+        dict with keys:
+          additional_discrepancies: list[str]
+          confidence_score: float in [0, 1]
+          reasoning: str
         """
-        logger.debug("Calling LLM for invoice semantic verification (MOCKED)...")
+        api_key = self._settings.openai_api_key
+        if not api_key or api_key.startswith("sk-PLACEHOLDER") or "PLACEHOLDER" in api_key:
+            raise ProcurementAgentError(
+                "LLM verification is not configured: set a real OPENAI_API_KEY "
+                "in procurement_agent/.env. Refusing to process payments "
+                "without AI verification (fail-closed)."
+            )
 
-        # --- Real implementation sketch (commented out) ---
-        # import openai
-        # client = openai.AsyncOpenAI(api_key=self._settings.openai_api_key)
-        # prompt = self._build_verification_prompt(order_intent, parsed_invoice)
-        # response = await client.chat.completions.create(
-        #     model=self._settings.llm_model,
-        #     messages=[{"role": "user", "content": prompt}],
-        #     response_format={"type": "json_object"},
-        # )
-        # return json.loads(response.choices[0].message.content)
+        client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=self._settings.openai_base_url or None,
+        )
+        messages = self._build_verification_messages(
+            order_intent, parsed_invoice, known_discrepancies
+        )
 
-        # MOCK RESPONSE — no additional discrepancies found
+        logger.info(
+            "Step 1: Calling LLM (%s) for semantic invoice verification...",
+            self._settings.llm_model,
+        )
+
+        try:
+            response = await client.chat.completions.create(
+                model=self._settings.llm_model,
+                messages=messages,
+                temperature=0.0,
+                response_format={"type": "json_object"},
+            )
+        except Exception as exc:  # noqa: BLE001 — fail closed on ANY LLM failure
+            raise ProcurementAgentError(
+                f"LLM verification call failed: {exc}"
+            ) from exc
+
+        content = response.choices[0].message.content
+        return self._parse_llm_verification(content)
+
+    def _build_verification_messages(
+        self,
+        order_intent: OrderIntent,
+        parsed_invoice: ParsedInvoice,
+        known_discrepancies: Optional[list[str]] = None,
+    ) -> list[dict[str, str]]:
+        """Build the chat prompt for the invoice-verification LLM call."""
+        system_prompt = (
+            "You are a strict procurement auditor for a community savings "
+            "group (stokvel). You compare a supplier's invoice against the "
+            "buyer's original order intent. Respond ONLY with a JSON object "
+            "of the exact shape:\n"
+            '{"additional_discrepancies": ["<short description>", ...], '
+            '"confidence_score": <number 0..1>, "reasoning": "<1-3 sentences>"}\n'
+            "additional_discrepancies lists NEW semantic mismatches the "
+            "deterministic checks could not catch: wrong quantities for the "
+            "described goods, mismatched item descriptions, unit prices that "
+            "do not match quantity * price, currency mismatches, suspicious "
+            "invoice numbers/dates, or duplicate-looking orders. If the "
+            "documents agree, return an empty list. Be conservative: only "
+            "report items you are confident about."
+        )
+        known = (
+            "Discrepancies ALREADY detected by deterministic checks (do not "
+            f"repeat them): {json.dumps(known_discrepancies)}"
+            if known_discrepancies
+            else "Deterministic checks found no discrepancies yet."
+        )
+        user_prompt = (
+            f"ORDER INTENT (what was ordered):\n"
+            f"{json.dumps(order_intent.model_dump(mode='json'), indent=2)}\n\n"
+            f"PARSED INVOICE (what the supplier submitted):\n"
+            f"{json.dumps(parsed_invoice.model_dump(mode='json'), indent=2)}\n\n"
+            f"{known}"
+        )
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    def _parse_llm_verification(self, content: Optional[str]) -> dict[str, Any]:
+        """
+        Parse and normalise the LLM's JSON reply. Fail-closed: anything
+        malformed raises ProcurementAgentError.
+        """
+        if not content or not content.strip():
+            raise ProcurementAgentError("LLM verification returned an empty response.")
+
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise ProcurementAgentError(
+                f"LLM verification returned unparseable JSON: {exc}"
+            ) from exc
+
+        if not isinstance(data, dict):
+            raise ProcurementAgentError(
+                "LLM verification returned a non-object JSON response."
+            )
+
+        discrepancies_raw = data.get("additional_discrepancies", [])
+        if not isinstance(discrepancies_raw, list):
+            raise ProcurementAgentError(
+                "LLM verification response has invalid 'additional_discrepancies'."
+            )
+        discrepancies = [str(d) for d in discrepancies_raw]
+
+        try:
+            confidence = float(data.get("confidence_score", 0.95))
+        except (TypeError, ValueError):
+            confidence = 0.95
+        confidence = min(max(confidence, 0.0), 1.0)
+
+        reasoning = str(data.get("reasoning", "")) or "No reasoning provided."
+
         return {
-            "additional_discrepancies": [],
-            "confidence_score": 0.97,
-            "reasoning": (
-                "[MOCK LLM] Invoice line items semantically match the order intent. "
-                "Quantities, descriptions, and unit prices are consistent."
-            ),
+            "additional_discrepancies": discrepancies,
+            "confidence_score": confidence,
+            "reasoning": reasoning,
         }
 
     # =========================================================================
@@ -348,8 +454,13 @@ class ProcurementAgent:
                 passed=False,
             )
 
-        # Query the XRPL for XLS-70 credentials on the supplier account
-        kyb_found = self._check_kyb_credential_on_ledger(supplier_address)
+        # Query the XRPL for XLS-70 credentials on the supplier account.
+        # NOTE: xrpl-py's sync client calls asyncio.run() internally, which is
+        # illegal inside FastAPI's running event loop — so run it in a worker
+        # thread (no running loop there). Same pattern used for submissions.
+        kyb_found = await asyncio.to_thread(
+            self._check_kyb_credential_on_ledger, supplier_address
+        )
 
         passed = on_allowlist and kyb_found
 
@@ -416,7 +527,7 @@ class ProcurementAgent:
     # Step 3 – Mandate Check
     # =========================================================================
 
-    def _step3_mandate_check(
+    async def _step3_mandate_check(
         self,
         supplier_address: str,
         transaction_amount: Decimal,
@@ -425,6 +536,16 @@ class ProcurementAgent:
         Check the Human Owner's mandate:
           - Is the transaction within the daily RLUSD spending cap?
           - Is the supplier on the owner-approved list?
+
+        AUTHORITATIVE LIMITS
+        --------------------
+        Cap and spend are read from the independent Policy Co-Signer
+        service — the component the Human Owner controls directly via its
+        admin API. A cap the owner just changed therefore takes effect on
+        the very next invoice, without restarting the agent. If the
+        cosigner service is unreachable, we fall back to the agent's local
+        config and in-memory tracker (the cosigner re-checks everything at
+        signing time regardless, so this fallback cannot be abused to spend).
         """
         logger.info(
             "Step 3: Mandate check | supplier=%s | amount=%s RLUSD",
@@ -434,12 +555,22 @@ class ProcurementAgent:
 
         daily_cap = self._settings.daily_spending_cap_rlusd
         already_spent = _get_daily_spend()
+        supplier_approved = supplier_address in self._settings.approved_supplier_list
+        limits_source = "agent-local fallback"
+
+        limits = await self._cosigner.get_limits()
+        if limits:
+            try:
+                daily_cap = Decimal(str(limits["daily_cap_rlusd"]))
+                already_spent = Decimal(str(limits.get("spent_today_rlusd", "0")))
+                limits_source = "policy-cosigner service (human-controlled)"
+            except (KeyError, ArithmeticError, ValueError) as exc:
+                logger.warning(
+                    "Cosigner limits response malformed (%s) — using local fallback", exc
+                )
+
         projected_spend = already_spent + transaction_amount
         within_cap = projected_spend <= daily_cap
-
-        # Approved supplier check (same list as ledger, but conceptually
-        # the mandate is set by the Human Owner, not just KYB verification)
-        supplier_approved = supplier_address in self._settings.approved_supplier_list
 
         mandate_satisfied = within_cap and supplier_approved
 
@@ -453,7 +584,11 @@ class ProcurementAgent:
         )
 
         logger.info(
-            "Step 3 complete | within_cap=%s | supplier_approved=%s | mandate_satisfied=%s",
+            "Step 3 complete | limits_source=%s | cap=%s | spent=%s | within_cap=%s | "
+            "supplier_approved=%s | mandate_satisfied=%s",
+            limits_source,
+            daily_cap,
+            already_spent,
             within_cap,
             supplier_approved,
             mandate_satisfied,
@@ -478,7 +613,7 @@ class ProcurementAgent:
         # ------------------------------------------------------------------
         # Shared: fetch a Ticket to prevent duplicate offline transactions
         # ------------------------------------------------------------------
-        ticket_sequence = self._fetch_ticket_sequence()
+        ticket_sequence = await self._fetch_ticket_sequence()
 
         # ------------------------------------------------------------------
         # Shared: build and autofill the EscrowCreate transaction
@@ -489,10 +624,8 @@ class ProcurementAgent:
             ticket_sequence=ticket_sequence,
         )
 
-        autofilled_tx = autofill(
-            escrow_tx,
-            self._client,
-            signers_count=2,  # Agent (w=1) + CoSigner or Human (w=2)
+        autofilled_tx = await asyncio.to_thread(
+            autofill, escrow_tx, self._client, signers_count=2,
         )
 
         # ------------------------------------------------------------------
@@ -562,8 +695,9 @@ class ProcurementAgent:
         )
 
         try:
-            # Request cosigner's independent signature
-            cosigner_signed_tx = self._cosigner.sign_transaction(
+            # Request cosigner's independent signature (HTTP to the
+            # cosigner microservice — the agent holds no cosigner keys).
+            cosigner_signed_tx = await self._cosigner.sign_transaction(
                 autofilled_tx=autofilled_tx,
                 transaction_amount_rlusd=parsed_invoice.stated_total,
                 destination_address=parsed_invoice.supplier_xrpl_address,
@@ -592,7 +726,10 @@ class ProcurementAgent:
         logger.info("Path A: Combined multi-sig transaction – submitting to XRPL Testnet...")
 
         try:
-            response = submit_and_wait(combined_tx, self._client)
+            # Blocking sync xrpl-py call -> worker thread (running-loop safety)
+            response = await asyncio.to_thread(
+                submit_and_wait, combined_tx, self._client
+            )
             tx_result = response.result["meta"]["TransactionResult"]
             tx_hash = response.result["hash"]
             ledger_index = response.result.get("ledger_index")
@@ -711,7 +848,7 @@ class ProcurementAgent:
     # XRPL Helpers
     # =========================================================================
 
-    def _fetch_ticket_sequence(self) -> int:
+    async def _fetch_ticket_sequence(self) -> int:
         """
         Create a Ticket on the XRPL and return its TicketSequence number.
 
@@ -741,7 +878,10 @@ class ProcurementAgent:
         )
 
         # Autofill uses normal Sequence for the TicketCreate itself
-        autofilled_ticket_tx = autofill(ticket_create, self._client, signers_count=2)
+        # (sync xrpl-py network call -> worker thread, running-loop safety)
+        autofilled_ticket_tx = await asyncio.to_thread(
+            autofill, ticket_create, self._client, signers_count=2
+        )
 
         # The agent signs the TicketCreate with multisign=True
         agent_ticket_sig = sign(
@@ -749,8 +889,11 @@ class ProcurementAgent:
         )
 
         # We also need the cosigner's signature for TicketCreate
-        # (same quorum rules apply – the main key is disabled)
-        cosigner_ticket_sig = self._cosigner.sign_transaction(
+        # (same quorum rules apply – the main key is disabled).
+        # TicketCreate moves no funds, so the cosigner's payment rules
+        # (cap/allowlist) do not apply to it — the service treats amount 0
+        # as an administrative op.
+        cosigner_ticket_sig = await self._cosigner.sign_transaction(
             autofilled_tx=autofilled_ticket_tx,
             # TicketCreate is an admin op; use 0 for the amount check
             transaction_amount_rlusd=Decimal("0"),
@@ -763,7 +906,9 @@ class ProcurementAgent:
         )
 
         try:
-            response = submit_and_wait(combined_ticket_tx, self._client)
+            response = await asyncio.to_thread(
+                submit_and_wait, combined_ticket_tx, self._client
+            )
             tx_result = response.result["meta"]["TransactionResult"]
             if tx_result != "tesSUCCESS":
                 raise ProcurementAgentError(

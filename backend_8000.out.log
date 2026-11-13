@@ -1,0 +1,27 @@
+2026-11-13T08:11:38.130689+00:00 | INFO     | app.main | ============================================================
+2026-11-13T08:11:38.131395+00:00 | INFO     | app.main | AI Procurement Agent starting up
+2026-11-13T08:11:38.131886+00:00 | INFO     | app.main | XRPL Node   : https://s.altnet.rippletest.net:51234/
+2026-11-13T08:11:38.132464+00:00 | INFO     | app.main | Main Account: rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
+2026-11-13T08:11:38.133003+00:00 | INFO     | app.main | Daily Cap   : 5000.00 RLUSD
+2026-11-13T08:11:38.133495+00:00 | INFO     | app.main | ============================================================
+INFO:     127.0.0.1:64507 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64510 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64516 - "OPTIONS /api/v1/process-invoice HTTP/1.1" 200 OK
+2026-11-13T08:11:44.545759+00:00 | INFO     | app.api.v1.agent_router | POST /api/v1/process-invoice | client=127.0.0.1 | order_id=ORD-20261113 | invoice=INV-9999
+2026-11-13T08:11:44.577905+00:00 | INFO     | app.services.procurement_agent | ProcurementAgent initialised | agent_address=rpLHnumucNhkzDrNptYg8ZN4j43nFYjKbb | main_account=rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
+2026-11-13T08:11:44.578314+00:00 | INFO     | app.services.procurement_agent | === Processing invoice | order_id=ORD-20261113 | invoice_number=INV-9999 ===
+2026-11-13T08:11:44.578600+00:00 | INFO     | app.services.procurement_agent | Step 1: Running AI invoice verification...
+2026-11-13T08:11:44.765393+00:00 | INFO     | app.services.procurement_agent | Step 1: Calling LLM (gpt-4o-mini) for semantic invoice verification...
+2026-11-13T08:11:46.347490+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-11-13T08:11:46.348471+00:00 | INFO     | openai._base_client | Retrying request in 0.419131 seconds (retry 1 of 2)
+2026-11-13T08:11:47.092331+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-11-13T08:11:47.104489+00:00 | INFO     | openai._base_client | Retrying request in 0.988014 seconds (retry 2 of 2)
+2026-11-13T08:11:48.780350+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-11-13T08:11:48.791990+00:00 | ERROR    | app.api.v1.agent_router | ProcurementAgentError | order_id=ORD-20261113 | error=LLM verification call failed: Error code: 429 - You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.
+INFO:     127.0.0.1:64516 - "POST /api/v1/process-invoice HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50661 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60465 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62726 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62737 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62752 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54446 - "GET /health HTTP/1.1" 404 Not Found

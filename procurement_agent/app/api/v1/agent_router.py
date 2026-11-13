@@ -82,9 +82,8 @@ async def process_invoice(
         payload.parsed_invoice.invoice_number,
     )
 
-    agent = _get_agent()
-
     try:
+        agent = _get_agent()
         result: ProcessInvoiceResponse = await agent.process_invoice(
             order_intent=payload.order_intent,
             parsed_invoice=payload.parsed_invoice,
@@ -113,7 +112,7 @@ async def process_invoice(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred. Check server logs.",
+                "message": f"An unexpected error occurred: {exc}",
                 "order_id": payload.order_intent.order_id,
             },
         )
@@ -148,7 +147,7 @@ def _log_outcome(result: ProcessInvoiceResponse, order_id: str) -> None:
     if result.outcome == InvoiceOutcome.APPROVED:
         tx = result.submitted_tx
         logger.info(
-            "✅ APPROVED | order_id=%s | hash=%s | explorer=%s",
+            "APPROVED (Path A) | order_id=%s | hash=%s | explorer=%s",
             order_id,
             tx.xrpl_tx_hash if tx else "N/A",
             tx.explorer_url if tx else "N/A",
@@ -156,14 +155,14 @@ def _log_outcome(result: ProcessInvoiceResponse, order_id: str) -> None:
     elif result.outcome == InvoiceOutcome.ESCALATED:
         ar = result.approval_request
         logger.warning(
-            "⚠️  ESCALATED | order_id=%s | reason=%s | detail=%s",
+            "ESCALATED (Path B) | order_id=%s | reason=%s | detail=%s",
             order_id,
             ar.escalation_reason if ar else "N/A",
             ar.human_readable_reason if ar else "N/A",
         )
     else:
         logger.warning(
-            "❌ REJECTED | order_id=%s | reason=%s",
+            "REJECTED | order_id=%s | reason=%s",
             order_id,
             result.rejection_reason,
         )
