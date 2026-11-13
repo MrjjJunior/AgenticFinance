@@ -11,6 +11,13 @@ If you're seeing this, you've probably already done this step. Congrats!
 npx sv create my-app
 ```
 
+To recreate this project with the same configuration:
+
+```sh
+# recreate this project
+npx sv@1.3.0 create --template minimal --types jsdoc --add prettier eslint --install npm .
+```
+
 ## Adding features
 
 Add features to your project with `sv add`:
