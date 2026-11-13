@@ -1,497 +1,342 @@
 <script>
-	let showPassword = false;
+	import { goto } from '\$app/navigation';
+	import Logo from '#lib/components/Logo.svelte';
 
-	/**
-	 * @param {{ preventDefault: () => void; }} event
-	 */
-	function handleSubmit(event) {
-		event.preventDefault();
-		// Authentication will be connected to your backend later.
+	/** @type {'manufacturer' | 'buyer' | null} */
+	let selectedRole = null;
+	let name = '';
+	let email = '';
+	let password = '';
+	let showPassword = false;
+	let agreed = false;
+
+	function selectRole(role) {
+		selectedRole = role;
+	}
+
+	function resetRole() {
+		selectedRole = null;
+	}
+
+	async function handleSubmit() {
+		if (!selectedRole) return;
+
+		// Persist user session info for /supplier or /manufacturer
+		localStorage.setItem('stocksafe_user', JSON.stringify({ role: selectedRole, name, email }));
+
+		if (selectedRole === 'buyer') {
+			await goto('/supplier');
+		} else if (selectedRole === 'manufacturer') {
+			await goto('/manufacturer');
+		}
 	}
 </script>
 
-<div class="authpage">
-	<!-- LEFT SECTION -->
-	<section class="hero">
-		<div class="logo">
-			<div class="logo-icon">
-				<span></span>
-				<span></span>
-			</div>
-			<div class="brand">
-				<span>Stock</span><span>Safe</span>
-			</div>
+<svelte:head>
+	<title>Create your account — StockSafe</title>
+</svelte:head>
+
+<div class="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-[#FAFAFA] text-[#1A1D1B]">
+	<!-- LEFT PANEL -->
+	<div
+		class="hidden lg:flex flex-col justify-between left-panel-gradient text-white p-12 xl:p-16 relative overflow-hidden"
+	>
+		<div
+			class="pointer-events-none absolute -bottom-24 -right-24 w-[480px] h-[480px] rounded-full bg-[#12A150]/10 blur-3xl"
+		></div>
+
+		<div class="relative z-10">
+			<Logo href="/" darkText={false} />
 		</div>
 
-		<div class="hero-content">
-			<p class="eyebrow">YOUR WEALTH, PROTECTED</p>
-
-			<h1>Welcome back to calmer investing.</h1>
-
-			<p class="description">
-				Your portfolio, protection settings, and market insights are waiting for you.
+		<div class="relative z-10 max-w-md my-auto">
+			<h1 class="text-4xl xl:text-[44px] font-bold tracking-tight leading-[1.15] text-white mb-5">
+				A smarter supply network starts here.
+			</h1>
+			<p class="text-[15px] leading-relaxed text-neutral-300/90">
+				Create your StockSafe account to connect manufacturers and buyers with full visibility and
+				protection.
 			</p>
 		</div>
 
-		<div class="trust">
-			<div class="avatars">
-				<span>AM</span>
-				<span>JL</span>
-				<span>RK</span>
+		<div class="relative z-10 flex items-center gap-3.5">
+			<div class="flex -space-x-2.5">
+				<div
+					class="w-8 h-8 rounded-full bg-[#D9E8DF] border-2 border-[#0D2418] flex items-center justify-center text-[11px] font-bold text-[#0D2418]"
+				>
+					JD
+				</div>
+				<div
+					class="w-8 h-8 rounded-full bg-[#A8D5BA] border-2 border-[#0D2418] flex items-center justify-center text-[11px] font-bold text-[#0D2418]"
+				>
+					AK
+				</div>
+				<div
+					class="w-8 h-8 rounded-full bg-[#12A150] border-2 border-[#0D2418] flex items-center justify-center text-[11px] font-bold text-white"
+				>
+					SM
+				</div>
 			</div>
-
-			<div>
-				<p>Trusted by 12,000+ investors</p>
-				<small>Secure, simple and built around you.</small>
-			</div>
+			<span class="text-xs font-medium text-neutral-300">
+				Trusted by <strong class="text-white font-semibold">50,000+</strong> partners
+			</span>
 		</div>
-	</section>
+	</div>
 
-	<!-- RIGHT SECTION -->
-	<section class="form-section">
-		<form class="login-form" onsubmit={handleSubmit}>
-			<div class="logo form-logo">
-				<div class="logo-icon">
-					<span></span>
-					<span></span>
+	<!-- RIGHT PANEL -->
+	<div class="flex flex-col items-center justify-center px-6 py-12 sm:px-12 bg-[#F7F8F7]">
+		<div
+			class="w-full max-w-[440px] bg-white rounded-2xl border border-neutral-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 sm:p-10"
+		>
+			<div class="mb-6">
+				<Logo href="/" darkText={true} size="sm" />
+			</div>
+
+			{#if !selectedRole}
+				<!-- STEP 1: CHOOSE MANUFACTURER OR BUYER -->
+				<div>
+					<div class="mb-6">
+						<span
+							class="inline-block text-[11px] font-bold uppercase tracking-wider text-[#12A150] mb-1"
+						>
+							Step 1 of 2
+						</span>
+						<h2 class="text-2xl font-bold tracking-tight text-[#1A1D1B]">
+							How will you use StockSafe?
+						</h2>
+						<p class="text-xs text-neutral-500 mt-1.5">
+							Choose your account type to continue to registration.
+						</p>
+					</div>
+
+					<div class="space-y-3.5">
+						<!-- Manufacturer Option -->
+						<button
+							type="button"
+							on:click={() => selectRole('manufacturer')}
+							class="w-full text-left p-4 rounded-xl border border-neutral-200 hover:border-[#12A150] hover:bg-[#F3FBF6] transition-all group flex items-start gap-4 cursor-pointer"
+						>
+							<div
+								class="w-10 h-10 rounded-xl bg-[#E8F7EE] text-[#12A150] group-hover:bg-[#12A150] group-hover:text-white flex items-center justify-center shrink-0 transition-colors"
+							>
+								<svg
+									class="w-5 h-5"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path
+										d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
+									/>
+									<path d="M17 18h1" /><path d="M12 18h1" /><path d="M7 18h1" />
+								</svg>
+							</div>
+							<div class="flex-1">
+								<div class="flex items-center justify-between">
+									<span class="font-bold text-sm text-[#1A1D1B]">I am a Manufacturer</span>
+									<span
+										class="text-neutral-400 group-hover:text-[#12A150] group-hover:translate-x-0.5 transition-all text-sm"
+										>&rarr;</span
+									>
+								</div>
+								<p class="text-xs text-neutral-500 mt-1 leading-relaxed">
+									List production capacity, manage inventory, and fulfill verified buyer orders.
+								</p>
+							</div>
+						</button>
+
+						<!-- Buyer Option -->
+						<button
+							type="button"
+							on:click={() => selectRole('buyer')}
+							class="w-full text-left p-4 rounded-xl border border-neutral-200 hover:border-[#12A150] hover:bg-[#F3FBF6] transition-all group flex items-start gap-4 cursor-pointer"
+						>
+							<div
+								class="w-10 h-10 rounded-xl bg-[#E8F7EE] text-[#12A150] group-hover:bg-[#12A150] group-hover:text-white flex items-center justify-center shrink-0 transition-colors"
+							>
+								<svg
+									class="w-5 h-5"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+									<path d="M3 6h18" />
+									<path d="M16 10a4 4 0 0 1-8 0" />
+								</svg>
+							</div>
+							<div class="flex-1">
+								<div class="flex items-center justify-between">
+									<span class="font-bold text-sm text-[#1A1D1B]">I am a Buyer</span>
+									<span
+										class="text-neutral-400 group-hover:text-[#12A150] group-hover:translate-x-0.5 transition-all text-sm"
+										>&rarr;</span
+									>
+								</div>
+								<p class="text-xs text-neutral-500 mt-1 leading-relaxed">
+									Discover trusted suppliers, source stock securely, and track orders in one view.
+								</p>
+							</div>
+						</button>
+					</div>
 				</div>
-				<div class="brand">
-					<span>Stock</span><span>Safe</span>
-				</div>
-			</div>
-
-			<div class="form-heading">
-				<p class="eyebrow">WELCOME BACK</p>
-				<h2>Sign in to StockSafe</h2>
-				<p>Enter your details to access your account.</p>
-			</div>
-
-			<!-- EMAIL INPUT -->
-			<div class="field">
-				<label for="email">Email address</label>
-
-				<input
-					id="email"
-					name="email"
-					type="email"
-					placeholder="you@example.com"
-					autocomplete="email"
-					required
-				/>
-			</div>
-
-			<!-- PASSWORD INPUT -->
-			<div class="field password-field">
-				<label for="password">Password</label>
-
-				<div class="password-wrapper">
-					<input
-						id="password"
-						name="password"
-						type={showPassword ? 'text' : 'password'}
-						placeholder="At least 6 characters"
-						minlength="6"
-						autocomplete="current-password"
-						required
-					/>
-
-					<button
-						type="button"
-						class="eye"
-						onclick={() => (showPassword = !showPassword)}
-						aria-label={showPassword ? 'Hide password' : 'Show password'}
+			{:else}
+				<!-- STEP 2: REGISTRATION FORM -->
+				<div>
+					<!-- Selected Role Banner -->
+					<div
+						class="flex items-center justify-between bg-[#F3FBF6] border border-[#12A150]/20 rounded-xl px-3.5 py-2.5 mb-5"
 					>
-						{showPassword ? 'Hide' : 'Show'}
-					</button>
+						<div class="flex items-center gap-2">
+							<span class="w-2 h-2 rounded-full bg-[#12A150]"></span>
+							<span class="text-xs text-neutral-600">
+								Registering as
+								<strong class="text-[#0D2418] font-semibold capitalize">{selectedRole}</strong>
+							</span>
+						</div>
+						<button
+							type="button"
+							on:click={resetRole}
+							class="text-xs font-semibold text-[#12A150] hover:text-[#0e8541] hover:underline cursor-pointer"
+						>
+							Change
+						</button>
+					</div>
+
+					<div class="mb-6">
+						<h2 class="text-2xl font-bold tracking-tight text-[#1A1D1B]">Create your account</h2>
+						<p class="text-xs text-neutral-500 mt-1.5">Complete your details to get started.</p>
+					</div>
+
+					<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+						<div>
+							<label for="name" class="block text-xs font-semibold text-neutral-700 mb-1.5">
+								Full name or Company name
+							</label>
+							<input
+								type="text"
+								id="name"
+								bind:value={name}
+								required
+								placeholder={selectedRole === 'manufacturer'
+									? 'e.g. Apex Manufacturing Ltd.'
+									: 'e.g. Divine Lubiku / Retail Co.'}
+								class="w-full px-3.5 py-2.5 text-sm bg-white border border-neutral-200 rounded-xl text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#12A150] focus:ring-2 focus:ring-[#12A150]/15 transition-all"
+							/>
+						</div>
+
+						<div>
+							<label for="email" class="block text-xs font-semibold text-neutral-700 mb-1.5">
+								Email address
+							</label>
+							<input
+								type="email"
+								id="email"
+								bind:value={email}
+								required
+								placeholder="name@example.com"
+								class="w-full px-3.5 py-2.5 text-sm bg-white border border-neutral-200 rounded-xl text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#12A150] focus:ring-2 focus:ring-[#12A150]/15 transition-all"
+							/>
+						</div>
+
+						<div>
+							<label for="password" class="block text-xs font-semibold text-neutral-700 mb-1.5">
+								Password
+							</label>
+							<div class="relative">
+								{#if showPassword}
+									<input
+										type="text"
+										id="password"
+										bind:value={password}
+										required
+										placeholder="Create a strong password"
+										class="w-full px-3.5 py-2.5 pr-10 text-sm bg-white border border-neutral-200 rounded-xl text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#12A150] focus:ring-2 focus:ring-[#12A150]/15 transition-all"
+									/>
+								{:else}
+									<input
+										type="password"
+										id="password"
+										bind:value={password}
+										required
+										placeholder="Create a strong password"
+										class="w-full px-3.5 py-2.5 pr-10 text-sm bg-white border border-neutral-200 rounded-xl text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#12A150] focus:ring-2 focus:ring-[#12A150]/15 transition-all"
+									/>
+								{/if}
+								<button
+									type="button"
+									on:click={() => (showPassword = !showPassword)}
+									aria-label="Toggle password visibility"
+									class="absolute inset-y-0 right-3 flex items-center text-neutral-400 hover:text-neutral-600 transition-colors"
+								>
+									<svg
+										class="w-4 h-4"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
+										<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+										<circle cx="12" cy="12" r="3"></circle>
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						<div class="pt-1">
+							<label class="inline-flex items-start gap-2.5 cursor-pointer select-none">
+								<input
+									type="checkbox"
+									bind:checked={agreed}
+									required
+									class="mt-0.5 w-3.5 h-3.5 rounded border-neutral-300 text-[#12A150] focus:ring-[#12A150]/20"
+								/>
+								<span class="text-xs text-neutral-600 leading-relaxed">
+									I agree to the <a href="/terms" class="text-[#12A150] font-medium hover:underline"
+										>Terms of Service</a
+									>
+									and
+									<a href="/privacy" class="text-[#12A150] font-medium hover:underline"
+										>Privacy Policy</a
+									>.
+								</span>
+							</label>
+						</div>
+
+						<button
+							type="submit"
+							class="w-full mt-2 bg-[#0D2418] hover:bg-[#143624] text-white font-medium text-sm py-3 px-4 rounded-xl inline-flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+						>
+							<span>Create account</span>
+							<span aria-hidden="true">&rarr;</span>
+						</button>
+					</form>
 				</div>
-			</div>
+			{/if}
 
-			<!-- REMEMBER ME AND FORGOT PASSWORD -->
-			<div class="options">
-				<label>
-					<input type="checkbox" name="rememberMe" />
-					Remember me
-				</label>
-
-				<a href="/forgot-password">Forgot password?</a>
-			</div>
-
-			<!-- SIGN IN BUTTON -->
-			<button type="submit" class="sign-in">
-				Sign in <span>→</span>
-			</button>
-
-			<!-- DIVIDER -->
-			<div class="separator">
-				<span>or continue with</span>
-			</div>
-
-			<!-- GOOGLE BUTTON -->
-			<button type="button" class="google">
-				<span>G</span> Google
-			</button>
-
-			<!-- CREATE ACCOUNT -->
-			<p class="signup">
-				New to StockSafe?
-				<a href="/register">Create account</a>
+			<p class="text-center text-xs text-neutral-500 mt-6">
+				Already have an account?
+				<a
+					href="/login"
+					class="font-semibold text-[#12A150] hover:text-[#0e8541] transition-colors ml-0.5"
+				>
+					Sign in
+				</a>
 			</p>
-		</form>
-	</section>
-
-	<a href="/" class="back-home">← Back home</a>
+		</div>
+	</div>
 </div>
 
 <style>
-	* {
-		box-sizing: border-box;
-	}
-
-	.authpage {
-		width: 1280px;
-		min-height: 1080px;
-		position: relative;
-		background: #102f20;
-		display: flex;
-		flex-direction: column;
-		font-family: Manrope, sans-serif;
-	}
-
-	/* LOGO */
-	.logo {
-		display: flex;
-		align-items: center;
-		gap: 9px;
-	}
-
-	.logo-icon {
-		width: 34px;
-		height: 34px;
-		background: #16a34a;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		position: relative;
-	}
-
-	.logo-icon span:first-child {
-		width: 11px;
-		height: 8px;
-		border: 1.5px solid white;
-	}
-
-	.logo-icon span:last-child {
-		width: 3px;
-		height: 3px;
-		border: 1px solid white;
-		position: absolute;
-		left: 12px;
-		top: 6px;
-	}
-
-	.brand {
-		font-size: 18px;
-		font-weight: 800;
-	}
-
-	.brand span:first-child {
-		color: #10231a;
-	}
-
-	.hero .brand span:first-child {
-		color: white;
-	}
-
-	.brand span:last-child {
-		color: #16a34a;
-	}
-
-	/* LEFT HERO SECTION */
-	.hero {
-		min-height: 1080px;
-		padding: 80px 55px;
-
-		background:
-			radial-gradient(ellipse 96.15% 162.25% at 90% 80%, rgba(41, 184, 98, 0.25), transparent 35%),
-			linear-gradient(135deg, #10231a, #103d28);
-
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		align-items: flex-start;
-	}
-
-	.hero-content {
-		width: 530px;
-	}
-
-	.eyebrow {
-		color: #168844;
-		font-family: 'DM Mono', monospace;
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 1.55px;
-		line-height: 18px;
-		text-transform: uppercase;
-	}
-
-	.hero h1 {
-		width: 530px;
-		margin-top: 20px;
-		color: white;
-		font-size: 64px;
-		font-weight: 800;
-		line-height: 1.02;
-	}
-
-	.description {
-		width: 510px;
-		margin-top: 20px;
-		color: #b9d0c2;
-		font-size: 16px;
-		font-weight: 500;
-		line-height: 27.2px;
-	}
-
-	.trust {
-		display: flex;
-		align-items: center;
-		gap: 15px;
-	}
-
-	.avatars {
-		display: flex;
-	}
-
-	.avatars span {
-		width: 36px;
-		height: 36px;
-		margin-right: -7px;
-		border: 2px solid #102f20;
-		border-radius: 50%;
-		background: #eaf7ee;
-		color: #102f20;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		font-size: 9px;
-		font-weight: 800;
-	}
-
-	.trust p {
-		color: white;
-		font-size: 12px;
-		margin: 0;
-	}
-
-	.trust small {
-		color: #98b4a5;
-		font-size: 10px;
-	}
-
-	/* RIGHT FORM SECTION */
-	.form-section {
-		padding: 45px;
-		background: #f7faf7;
-		display: flex;
-		align-items: flex-start;
-	}
-
-	.login-form {
-		width: 480px;
-		min-height: 669.9px;
-		padding: 36px;
-		background: white;
-		border: 1px solid #dfe8e3;
-		border-radius: 28px;
-		box-shadow: 0 25px 65px rgba(5, 30, 17, 0.15);
-		display: flex;
-		flex-direction: column;
-	}
-
-	.form-heading {
-		width: 100%;
-		padding-top: 35px;
-	}
-
-	.form-heading .eyebrow {
-		margin: 0;
-	}
-
-	.form-heading h2 {
-		color: #10231a;
-		font-size: 30px;
-		font-weight: 800;
-		line-height: 45px;
-		margin: 7px 0 0;
-	}
-
-	.form-heading p:last-child {
-		color: #64786e;
-		font-size: 13px;
-		font-weight: 500;
-		margin: 7px 0 0;
-	}
-
-	/* INPUT FIELDS */
-	.field {
-		width: 100%;
-		margin-top: 26px;
-	}
-
-	.field label {
-		display: block;
-		color: #10231a;
-		font-size: 11px;
-		font-weight: 700;
-		margin-bottom: 7px;
-	}
-
-	.field input {
-		width: 100%;
-		height: 49.1px;
-		padding: 14px 15px;
-		background: #f1f8f3;
-		border: none;
-		border-radius: 12px;
-		outline: none;
-		color: #10231a;
-		font-family: Manrope, sans-serif;
-		font-size: 13px;
-		font-weight: 500;
-	}
-
-	.field input::placeholder {
-		color: rgba(16, 35, 26, 0.5);
-	}
-
-	.field input:focus {
-		outline: 1px solid #16a34a;
-	}
-
-	.password-field {
-		margin-top: 17px;
-	}
-
-	.password-wrapper {
-		position: relative;
-	}
-
-	.password-wrapper input {
-		padding-right: 65px;
-	}
-
-	.eye {
-		position: absolute;
-		right: 15px;
-		top: 50%;
-		transform: translateY(-50%);
-		background: none;
-		border: none;
-		color: #718379;
-		cursor: pointer;
-		font-size: 11px;
-	}
-
-	/* OPTIONS */
-	.options {
-		width: 100%;
-		padding-top: 15px;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		color: #64786e;
-		font-size: 11px;
-	}
-
-	.options label {
-		display: flex;
-		align-items: center;
-		gap: 7px;
-	}
-
-	.options input {
-		width: 13px;
-		height: 13px;
-		accent-color: #16a34a;
-	}
-
-	.options a,
-	.signup a {
-		color: #16a34a;
-		font-weight: 700;
-		text-decoration: none;
-	}
-
-	/* BUTTONS */
-	.sign-in {
-		width: 100%;
-		height: 48px;
-		margin-top: 22px;
-		border: none;
-		border-radius: 13px;
-		background: #102f20;
-		color: white;
-		font-size: 12px;
-		font-weight: 800;
-		cursor: pointer;
-	}
-
-	.sign-in span {
-		margin-left: 10px;
-	}
-
-	.separator {
-		height: 36px;
-		margin-top: 25px;
-		border-bottom: 1px solid #dfe8e3;
-		color: #87988f;
-		text-align: center;
-		font-size: 10px;
-	}
-
-	.separator span {
-		background: white;
-		padding: 0 10px;
-	}
-
-	.google {
-		width: 100%;
-		height: 43.6px;
-		margin-top: 0;
-		border: 1px solid #dfe8e3;
-		border-radius: 12px;
-		background: white;
-		color: #10231a;
-		font-size: 12px;
-		font-weight: 700;
-		cursor: pointer;
-	}
-
-	.google span {
-		color: #4285f4;
-		margin-right: 8px;
-	}
-
-	.signup {
-		margin-top: 20px;
-		color: #64786e;
-		text-align: center;
-		font-size: 11px;
-	}
-
-	/* BACK HOME */
-	.back-home {
-		position: absolute;
-		top: 28px;
-		left: 30px;
-		padding: 9px 14px;
-		border: none;
-		border-radius: 99px;
-		background: rgba(255, 255, 255, 0.08);
-		color: #d1e1d7;
-		font-size: 12px;
-		text-decoration: none;
+	.left-panel-gradient {
+		background: radial-gradient(circle at 85% 65%, #16422b 0%, #0d2418 55%, #091a11 100%);
 	}
 </style>
