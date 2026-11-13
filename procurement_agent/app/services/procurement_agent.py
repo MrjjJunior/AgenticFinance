@@ -220,7 +220,7 @@ class ProcurementAgent:
         """
         Ask an LLM to compare the parsed invoice against the original order intent.
 
-        In production, replace the mock with a real OpenAI/Anthropic call.
+        In production, use a real Groq/Anthropic call.
         The structured prompt is designed to elicit a JSON response with
         specific discrepancy fields that map to our schema.
         """
@@ -292,7 +292,7 @@ class ProcurementAgent:
         known_discrepancies: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """
-        REAL OpenAI call: the LLM cross-checks the parsed invoice against the
+        Groq chat-completions call: the LLM cross-checks the parsed invoice against the
         original order intent and reports additional semantic discrepancies.
 
         Fail-closed policy
@@ -308,17 +308,17 @@ class ProcurementAgent:
           confidence_score: float in [0, 1]
           reasoning: str
         """
-        api_key = self._settings.openai_api_key
-        if not api_key or api_key.startswith("sk-PLACEHOLDER") or "PLACEHOLDER" in api_key:
+        api_key = self._settings.groq_api_key
+        if not api_key or "PLACEHOLDER" in api_key:
             raise ProcurementAgentError(
-                "LLM verification is not configured: set a real OPENAI_API_KEY "
+                "LLM verification is not configured: set a real GROQ_API_KEY "
                 "in procurement_agent/.env. Refusing to process payments "
                 "without AI verification (fail-closed)."
             )
 
         client = AsyncOpenAI(
             api_key=api_key,
-            base_url=self._settings.openai_base_url or None,
+            base_url=self._settings.groq_base_url or None,
         )
         messages = self._build_verification_messages(
             order_intent, parsed_invoice, known_discrepancies

@@ -41,7 +41,7 @@ cd ..
 
 # 2. Create wallets + multisig signer list on XRPL Testnet (once)
 .\procurement_agent\venv\Scripts\python procurement_agent\setup_wallets.py
-#    → writes procurement_agent\.env (seeds). Add your OPENAI_API_KEY to that file.
+#    → writes procurement_agent\.env (seeds). Add your GROQ_API_KEY to that file.
 
 # 3. Provision the demo world (once per fresh .env): supplier, RLUSD issuer,
 #    trustlines, 25,000 RLUSD, XLS-70 KYB credential
@@ -54,7 +54,7 @@ cd ..
 ```
 
 Requirements: Python 3.11+, internet access to XRPL Testnet, and an
-**OpenAI API key** in `procurement_agent/.env` (`OPENAI_API_KEY=sk-...`).
+**Groq API key** in `procurement_agent/.env` (`GROQ_API_KEY=gsk-...`).
 The LLM verification step is fail-closed: without a working key the agent
 refuses to process invoices rather than skipping the check.
 
@@ -133,9 +133,9 @@ Useful cosigner endpoints (what the Owner Console uses):
 | `RLUSD_ISSUER` | The Testnet RLUSD gateway this demo issued from |
 | `APPROVED_SUPPLIER_ADDRESSES` | Seed value for the cosigner's allowlist (first run only — afterwards change via Owner Console) |
 | `DAILY_SPENDING_CAP_RLUSD` | Seed value for the cosigner's cap (first run only) |
-| `OPENAI_API_KEY` | Required — real LLM verification (fail-closed) |
-| `LLM_MODEL` | Default `gpt-4o-mini` |
-| `OPENAI_BASE_URL` | Optional — point at an OpenAI-compatible stub for testing |
+| `GROQ_API_KEY` | Required — real LLM verification (fail-closed) |
+| `LLM_MODEL` | Default `llama-3.3-70b-versatile` |
+| `GROQ_BASE_URL` | Groq API endpoint by default; set to the local OpenAI-compatible stub for testing |
 | `COSIGNER_ADMIN_TOKEN` | Optional — protects the cosigner admin endpoints |
 
 The cosigner's *live* limits live in `cosigner_service/cosigner_limits.json`

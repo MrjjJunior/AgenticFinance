@@ -57,10 +57,10 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # LLM Configuration
     # ------------------------------------------------------------------
-    openai_api_key: str = "sk-PLACEHOLDER"
-    llm_model: str = "gpt-4o-mini"
-    # Optional: point at an OpenAI-compatible stub for offline testing.
-    openai_base_url: str = ""
+    groq_api_key: str = "gsk-PLACEHOLDER"
+    llm_model: str = "llama-3.3-70b-versatile"
+    # Defaults to Groq; override to point at an OpenAI-compatible stub.
+    groq_base_url: str = "https://api.groq.com/openai/v1"
 
     # ------------------------------------------------------------------
     # Mandate / Business Rules

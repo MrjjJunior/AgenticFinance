@@ -1,11 +1,11 @@
 """
 Optional local OpenAI-compatible stub server (dev/demo tool).
 
-Why: the agent makes a REAL OpenAI API call for Step 1 (fail-closed). When
+Why: the agent makes a REAL Groq API call for Step 1 (fail-closed). When
 you have no API credits — or want a fully offline demo — point the agent at
 this server:
 
-    set OPENAI_BASE_URL=http://127.0.0.1:18099/v1   (in .env or environment)
+    set GROQ_BASE_URL=http://127.0.0.1:18099/v1   (in .env or environment)
 
 It implements the /v1/chat/completions protocol and performs the same
 semantic invoice-vs-order checks a real LLM would, deterministically:

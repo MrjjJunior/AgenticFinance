@@ -1,1 +1,4 @@
-INFO:     127.0.0.1:64403 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58290 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58308 - "GET /limits HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58323 - "POST /cosign HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58340 - "POST /cosign HTTP/1.1" 200 OK

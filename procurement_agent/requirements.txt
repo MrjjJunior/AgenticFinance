@@ -3,6 +3,6 @@ uvicorn[standard]>=0.29.0
 pydantic>=2.7.0
 pydantic-settings>=2.3.0
 xrpl-py>=3.0.0
-openai>=1.30.0        # for real LLM verification calls
+openai>=1.30.0        # Groq exposes an OpenAI-compatible chat completions API
 httpx>=0.27.0         # for async HTTP to Policy Co-Signer microservice
 python-dotenv>=1.0.0

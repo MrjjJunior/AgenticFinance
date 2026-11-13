@@ -75,7 +75,7 @@ see the [root README](../README.md#quick-start-5-commands).
 - **ERROR** — stop the backend and submit → shows connection troubleshooting.
 
 > **APPROVED submits a real transaction** to XRPL *Testnet* and calls the
-> real OpenAI API for Step 1. Use test wallets only.
+> real Groq API for Step 1. Use test wallets only.
 
 ## Troubleshooting
 
@@ -85,7 +85,7 @@ see the [root README](../README.md#quick-start-5-commands).
 | Cosigner dot red | Cosigner service not running — start it (see above), default `http://localhost:8001/health`. |
 | `Failed to fetch` on submit | Same as backend dot. Confirm health URL in the browser first. |
 | Save limits fails with 403 | The cosigner requires an admin token — set it in the token field (must match `COSIGNER_ADMIN_TOKEN`). |
-| HTTP 500 mentioning LLM | The OpenAI key is missing/invalid — verification is fail-closed by design. |
+| HTTP 500 mentioning LLM | The Groq key is missing/invalid — verification is fail-closed by design. |
 | HTTP 422 on submit | A field failed backend validation — the error body lists which one. |
 | Stale demo supplier address | Re-run `procurement_agent/setup_demo.py`; it re-patches the demo fields automatically. |
 

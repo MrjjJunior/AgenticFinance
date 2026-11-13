@@ -43,7 +43,7 @@ COSIGNER_ADDRESS = "rCosignerAddress00000000000000000"
 @pytest.fixture(autouse=True)
 def _offline_llm():
     """
-    Never hit the real OpenAI API from tests.
+    Never hit the real Groq API from tests.
 
     Patches the AsyncOpenAI symbol inside the agent module, so the REAL
     _call_llm_for_verification code path still runs (settings checks,
@@ -166,9 +166,9 @@ def _build_agent(
     mock_settings.agent_seed = "sFAKE_AGENT_SEED"
     mock_settings.policy_cosigner_seed = "sFAKE_COSIGNER_SEED"
     mock_settings.policy_cosigner_base_url = "http://localhost:8001"
-    mock_settings.openai_api_key = "sk-test-not-placeholder"
-    mock_settings.openai_base_url = ""
-    mock_settings.llm_model = "gpt-4o-mini"
+    mock_settings.groq_api_key = "gsk-test-not-placeholder"
+    mock_settings.groq_base_url = "https://api.groq.com/openai/v1"
+    mock_settings.llm_model = "llama-3.3-70b-versatile"
     mock_settings.daily_spending_cap_rlusd = Decimal("5000.00")
     mock_settings.approved_supplier_list = [APPROVED_SUPPLIER]
     mock_settings.kyb_credential_type = "KYBVerified"
@@ -527,7 +527,7 @@ async def test_llm_semantic_discrepancy_rejects_invoice(_offline_llm):
 async def test_llm_placeholder_api_key_fails_closed():
     """A placeholder API key must abort the workflow, never pass it."""
     agent, *_ = _build_agent()
-    agent._settings.openai_api_key = "sk-PLACEHOLDER"
+    agent._settings.groq_api_key = "gsk-PLACEHOLDER"
 
     with pytest.raises(ProcurementAgentError):
         await agent._call_llm_for_verification(_make_order(), _make_invoice())

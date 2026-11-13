@@ -1,4 +1,5 @@
-INFO:     Started server process [33668]
+INFO:     Started server process [10716]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+COSIGNED payment | value=1480 RLUSD | destination=rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL | spend_today=1480

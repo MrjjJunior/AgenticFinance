@@ -1,96 +1,31 @@
-2026-11-13T08:11:38.130689+00:00 | INFO     | app.main | ============================================================
-2026-11-13T08:11:38.131395+00:00 | INFO     | app.main | AI Procurement Agent starting up
-2026-11-13T08:11:38.131886+00:00 | INFO     | app.main | XRPL Node   : https://s.altnet.rippletest.net:51234/
-2026-11-13T08:11:38.132464+00:00 | INFO     | app.main | Main Account: rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
-2026-11-13T08:11:38.133003+00:00 | INFO     | app.main | Daily Cap   : 5000.00 RLUSD
-2026-11-13T08:11:38.133495+00:00 | INFO     | app.main | ============================================================
-INFO:     127.0.0.1:64507 - "GET /api/v1/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64510 - "GET /api/v1/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64516 - "OPTIONS /api/v1/process-invoice HTTP/1.1" 200 OK
-2026-11-13T08:11:44.545759+00:00 | INFO     | app.api.v1.agent_router | POST /api/v1/process-invoice | client=127.0.0.1 | order_id=ORD-20261113 | invoice=INV-9999
-2026-11-13T08:11:44.577905+00:00 | INFO     | app.services.procurement_agent | ProcurementAgent initialised | agent_address=rpLHnumucNhkzDrNptYg8ZN4j43nFYjKbb | main_account=rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
-2026-11-13T08:11:44.578314+00:00 | INFO     | app.services.procurement_agent | === Processing invoice | order_id=ORD-20261113 | invoice_number=INV-9999 ===
-2026-11-13T08:11:44.578600+00:00 | INFO     | app.services.procurement_agent | Step 1: Running AI invoice verification...
-2026-11-13T08:11:44.765393+00:00 | INFO     | app.services.procurement_agent | Step 1: Calling LLM (gpt-4o-mini) for semantic invoice verification...
-2026-11-13T08:11:46.347490+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
-2026-11-13T08:11:46.348471+00:00 | INFO     | openai._base_client | Retrying request in 0.419131 seconds (retry 1 of 2)
-2026-11-13T08:11:47.092331+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
-2026-11-13T08:11:47.104489+00:00 | INFO     | openai._base_client | Retrying request in 0.988014 seconds (retry 2 of 2)
-2026-11-13T08:11:48.780350+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
-2026-11-13T08:11:48.791990+00:00 | ERROR    | app.api.v1.agent_router | ProcurementAgentError | order_id=ORD-20261113 | error=LLM verification call failed: Error code: 429 - You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.
-INFO:     127.0.0.1:64516 - "POST /api/v1/process-invoice HTTP/1.1" 500 Internal Server Error
-INFO:     127.0.0.1:50661 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60465 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:62726 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:62737 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:62752 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54446 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51745 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51753 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:65034 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:65051 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52740 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52747 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52751 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52757 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52769 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52778 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60720 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60735 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55661 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55667 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55671 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55676 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51384 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:64767 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56515 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:62745 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:64029 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61263 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:57547 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:65492 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54717 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54356 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54360 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54366 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55237 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55243 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:53173 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:53179 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52023 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52030 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56522 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56531 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56540 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56546 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56556 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56556 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:63846 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:64233 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56161 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:63818 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56341 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51474 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50342 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60134 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61408 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51177 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56297 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54210 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61646 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51771 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:49887 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:64512 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:57142 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50798 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50808 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61513 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61528 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61539 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61544 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:64515 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56593 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50428 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:62859 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61525 - "GET /health HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52481 - "GET /health HTTP/1.1" 404 Not Found
+2026-11-13T11:32:33.971455+00:00 | INFO     | app.main | ============================================================
+2026-11-13T11:32:33.972691+00:00 | INFO     | app.main | AI Procurement Agent starting up
+2026-11-13T11:32:33.974039+00:00 | INFO     | app.main | XRPL Node   : https://s.altnet.rippletest.net:51234/
+2026-11-13T11:32:33.975317+00:00 | INFO     | app.main | Main Account: rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
+2026-11-13T11:32:33.976326+00:00 | INFO     | app.main | Daily Cap   : 5000.00 RLUSD
+2026-11-13T11:32:33.977365+00:00 | INFO     | app.main | ============================================================
+INFO:     127.0.0.1:58294 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58297 - "GET /api/v1/health HTTP/1.1" 200 OK
+2026-11-13T11:32:43.650751+00:00 | INFO     | app.api.v1.agent_router | POST /api/v1/process-invoice | client=127.0.0.1 | order_id=ORD-20261113 | invoice=INV-9999
+2026-11-13T11:32:43.739334+00:00 | INFO     | app.services.procurement_agent | ProcurementAgent initialised | agent_address=rpLHnumucNhkzDrNptYg8ZN4j43nFYjKbb | main_account=rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
+2026-11-13T11:32:43.740025+00:00 | INFO     | app.services.procurement_agent | === Processing invoice | order_id=ORD-20261113 | invoice_number=INV-9999 ===
+2026-11-13T11:32:43.740464+00:00 | INFO     | app.services.procurement_agent | Step 1: Running AI invoice verification...
+2026-11-13T11:32:44.192523+00:00 | INFO     | app.services.procurement_agent | Step 1: Calling LLM (openai/gpt-oss-120b) for semantic invoice verification...
+2026-11-13T11:32:45.451052+00:00 | INFO     | httpx2 | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-11-13T11:32:45.497934+00:00 | INFO     | app.services.procurement_agent | Step 1 complete | passed=True | discrepancies=0 | confidence=0.97
+2026-11-13T11:32:45.500534+00:00 | INFO     | app.services.procurement_agent | Step 2: Verifying supplier on ledger | address=rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL
+INFO:     127.0.0.1:58305 - "GET /health HTTP/1.1" 404 Not Found
+2026-11-13T11:32:48.176919+00:00 | INFO     | app.services.procurement_agent | KYB credential found | supplier=rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL | credential_id=DFF23A08780F675E5E3023EEFD981EED9A3EF26406C53B73852B6CF2BD285565
+2026-11-13T11:32:48.189496+00:00 | INFO     | app.services.procurement_agent | Step 2 complete | on_allowlist=True | kyb_found=True | passed=True
+2026-11-13T11:32:48.191120+00:00 | INFO     | app.services.procurement_agent | Step 3: Mandate check | supplier=rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL | amount=1480 RLUSD
+2026-11-13T11:32:48.530774+00:00 | INFO     | app.services.procurement_agent | Step 3 complete | limits_source=policy-cosigner service (human-controlled) | cap=5000.00 | spent=0 | within_cap=True | supplier_approved=True | mandate_satisfied=True
+2026-11-13T11:32:48.531543+00:00 | INFO     | app.services.procurement_agent | Fetching XRPL Ticket for duplicate-safe sequencing...
+2026-11-13T11:32:55.987091+00:00 | INFO     | app.services.policy_cosigner | PolicyCosigner: requesting signature from http://localhost:8001/cosign | amount=0 RLUSD | destination=rhvqznC8SpqGuozEA3HaZ1w1t7Brwgxy9K
+2026-11-13T11:32:56.478505+00:00 | INFO     | app.services.policy_cosigner | PolicyCosigner: signature applied | cosigner_address=rpJkTQv4QRFA4MqmPGskfFHbYSVhDu1QPL
+2026-11-13T11:33:02.320225+00:00 | INFO     | app.services.procurement_agent | Ticket created | TicketSequence=22283425
+2026-11-13T11:33:02.332258+00:00 | INFO     | app.services.procurement_agent | Building EscrowCreate (RLUSD as IOU Payment) | destination=rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL | amount=1480 | ticket=22283425
+2026-11-13T11:33:05.586568+00:00 | INFO     | app.services.procurement_agent | Agent signed transaction | agent=rpLHnumucNhkzDrNptYg8ZN4j43nFYjKbb | ticket_sequence=22283425
+2026-11-13T11:33:05.597520+00:00 | INFO     | app.services.procurement_agent | Path A: Mandate satisfied – requesting Policy Co-Signer signature...
+2026-11-13T11:33:05.599573+00:00 | INFO     | app.services.policy_cosigner | PolicyCosigner: requesting signature from http://localhost:8001/cosign | amount=1480 RLUSD | destination=rGyPkebDuzXtaF4J4igQgPZGo28pCKu3XL
+2026-11-13T11:33:05.983890+00:00 | INFO     | app.services.policy_cosigner | PolicyCosigner: signature applied | cosigner_address=rpJkTQv4QRFA4MqmPGskfFHbYSVhDu1QPL
+2026-11-13T11:33:06.006686+00:00 | INFO     | app.services.procurement_agent | Path A: Combined multi-sig transaction – submitting to XRPL Testnet...

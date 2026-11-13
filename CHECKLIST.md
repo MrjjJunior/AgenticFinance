@@ -1,7 +1,7 @@
 # Stokvel AI Procurement Agent — Verified Feature Checklist
 
 Last verified: 2026-11-13, all live on **XRPL Testnet** with the split
-cosigner microservice and the real OpenAI LLM call.
+cosigner microservice and the real Groq LLM call.
 Run `procurement_agent\venv\Scripts\pytest tests\ -q` → **27 passed**.
 
 ---
@@ -10,7 +10,7 @@ Run `procurement_agent\venv\Scripts\pytest tests\ -q` → **27 passed**.
 
 | # | Feature | Status | Evidence |
 |---|---------|--------|----------|
-| 1 | **AI Document Verification** | ✅ **REAL LLM** | `_call_llm_for_verification` makes a real OpenAI `chat.completions` call (`response_format=json_object`, temperature 0), parses + normalises the reply, and **fails closed** (raises `ProcurementAgentError`) on missing key / API error / unparseable JSON. Live-verified: a key without credits produced HTTP 429 and the agent aborted with `AGENT_EXECUTION_FAILED` instead of proceeding. Deterministic checks (address/total/item-count) still run first. Tests cover: LLM-reported discrepancy → REJECTED, placeholder key → abort, network error → abort, bad JSON → abort. |
+| 1 | **AI Document Verification** | ✅ **REAL LLM** | `_call_llm_for_verification` makes a real Groq-compatible `chat.completions` call (`response_format=json_object`, temperature 0), parses + normalises the reply, and **fails closed** (raises `ProcurementAgentError`) on missing key / API error / unparseable JSON. Deterministic checks (address/total/item-count) still run first. Tests cover: LLM-reported discrepancy → REJECTED, placeholder key → abort, network error → abort, bad JSON → abort. |
 | 2 | **Ledger Credential Checking** | ✅ Works | Real `AccountObjects(type=CREDENTIAL)` query vs Testnet; demo supplier holds an accepted XLS-70 `KYBVerified` credential. |
 | 3 | **Mandate Enforcement** | ✅ **Now external** | Cap + spend read live from the cosigner service (`GET /limits`); the agent has no API to change them. A cap change via the Owner Console affected the very next invoice **without an agent restart** (live: cap 5000 → 100 → invoice blocked citing "cap of 100.00"). |
 | 4 | **Autonomous Execution (Path A)** | ✅ Works | Live explorer tx `205A216B…F7D633` (HTTP-cosigner build): agent(1) + cosigner(1) via HTTP, ticket-based sequencing, no human. Earlier build: `514A0F01…B272`. |
@@ -29,8 +29,7 @@ Run `procurement_agent\venv\Scripts\pytest tests\ -q` → **27 passed**.
 
 ## Remaining notes (honest gaps)
 
-- **OpenAI credits**: the configured key is valid but has **no credits** (429).
-  Add credits for the real-LLM demo, or set `OPENAI_BASE_URL=http://127.0.0.1:18099/v1`
+- **Groq quota**: if the configured key reaches its API limit (429), check the Groq account quota or set `GROQ_BASE_URL=http://127.0.0.1:18099/v1`
   in `.env` — `start_all.ps1` will then auto-start the included
   OpenAI-compatible stub (`procurement_agent/llm_stub.py`) and the full demo
   runs offline. The agent's code path is identical either way (real client,

@@ -49,10 +49,10 @@ foreach ($port in 8000, 8001, 18099) {
 }
 
 # --------------------------------------------------------------- optional LLM stub
-# If .env points OPENAI_BASE_URL at a local OpenAI-compatible stub, start it.
+# If .env points GROQ_BASE_URL at a local OpenAI-compatible stub, start it.
 $envFile = Join-Path $repo "procurement_agent\.env"
 if (Test-Path $envFile) {
-    $stubLine = (Get-Content $envFile | Where-Object { $_ -match "^OPENAI_BASE_URL=http" } | Select-Object -First 1)
+    $stubLine = (Get-Content $envFile | Where-Object { $_ -match "^GROQ_BASE_URL=http://(localhost|127\.0\.0\.1):\d+" } | Select-Object -First 1)
     if ($stubLine) {
         if ($stubLine -match ":(\d+)") { $stubPort = [int]$Matches[1] } else { $stubPort = 18099 }
         $listener = Get-NetTCPConnection -LocalPort $stubPort -State Listen -ErrorAction SilentlyContinue
